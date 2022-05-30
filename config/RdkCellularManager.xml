@@ -37,6 +37,7 @@
                 <func_Commit>Cellular_Commit</func_Commit>
                 <func_Rollback>Cellular_Rollback</func_Rollback>
             </functions>
+<?ifndef RBUS_BUILD_FLAG_ENABLE?>
             <parameters>
                 <parameter>
                     <name>X_RDK_Enable</name>
@@ -844,6 +845,7 @@
                         </parameters>
                 </object>
             </objects>
+<?endif?>
         </object>
     </objects>
 </dataModelInfo>

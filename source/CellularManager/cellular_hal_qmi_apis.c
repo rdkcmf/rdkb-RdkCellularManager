@@ -1451,8 +1451,7 @@ static void cellular_hal_qmi_device_open_step( GTask *task )
         }
         case MODEM_OPEN_STATE_NAS_NETWORK_SCAN_INIT:
         {
-            //FIX ME: Avoiding network scan start here to avoid internal QMI crash during scan. 
-            //cellular_hal_qmi_network_scan_data_collection_task();
+            cellular_hal_qmi_network_scan_data_collection_task();
             pDeviceOpenCtx->uiCurrentStep++;
             /* fall through */
         }

@@ -30,3 +30,7 @@ libcellularmanager_middle_layer_src_la_CPPFLAGS = -I$(top_srcdir)/source/TR-181/
 
 libcellularmanager_middle_layer_src_la_SOURCES =  cellularmgr_plugin_main.c  cellularmgr_plugin_main_apis.c cellularmgr_cellular_dml.c cellularmgr_utils.c cellularmgr_cellular_param.c cellularmgr_cellular_helpers.c cellularmgr_cellular_webconfig_api.c
 libcellularmanager_middle_layer_src_la_LDFLAGS = -lccsp_common -lrdkloggers $(DBUS_LIBS) $(SYSTEMD_LDFLAGS) -lnanomsg -lsysevent -lmsgpackc -lcurl -lwebconfig_framework -ltrower-base64
+
+libcellularmanager_middle_layer_src_la_CPPFLAGS += -I${PKG_CONFIG_SYSROOT_DIR}$(includedir)/rbus -I${PKG_CONFIG_SYSROOT_DIR}$(includedir)/rtmessage
+libcellularmanager_middle_layer_src_la_SOURCES += cellularmgr_rbus_helpers.c cellularmgr_rbus_dml.c
+libcellularmanager_middle_layer_src_la_LDFLAGS += -lrbus -lrbus-core -lrtMessage -lmsgpackc

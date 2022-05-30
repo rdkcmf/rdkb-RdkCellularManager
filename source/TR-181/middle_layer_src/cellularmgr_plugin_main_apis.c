@@ -43,7 +43,9 @@
 #include "cellularmgr_utils.h"
 #include "syscfg/syscfg.h"
 #include <sysevent/sysevent.h>
-
+#if RBUS_BUILD_FLAG_ENABLE
+#include "cellularmgr_rbus_dml.h"
+#endif
 #define SE_IP_ADDR      "127.0.0.1"
 #define SE_PROG_NAME    "CellularManager"
 
@@ -139,7 +141,12 @@ BackEndManagerRemove
         AnscTraceError(("%s:%d:: Pointer is null!!\n", __FUNCTION__, __LINE__));
         return ANSC_STATUS_FAILURE;
     }
-
+#if RBUS_BUILD_FLAG_ENABLE
+    if(cellularmgr_Unload() != RBUS_ERROR_SUCCESS)
+    {
+         CcspTraceError(("%s %d - Rbus Term failed !\n", __FUNCTION__, __LINE__ ));
+    }
+#endif
     /* * Remove Cellular */
     if( NULL != pMyObject->hCellular )
     {
@@ -214,11 +221,24 @@ BackEndManagerInitialize
     }
 
     pMyObject->hCellular    = (ANSC_HANDLE)CellularMgr_CellularCreate();
+    if (pMyObject->hCellular == NULL)
+    {
+        AnscTraceError(("%s:%d:: CellularMgr_CellularCreate Failed \n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
     AnscTraceInfo((" CellularMgr_CellularCreate done!\n"));
 	
     CcspTraceInfo(("Initializing WebConfig Framework!\n"));
     webConfigFrameworkInit();
     CcspTraceInfo(("Initializing WebConfig Framework done!\n"));
-	
+    
+    //Starts the Rbus Initialize
+#if RBUS_BUILD_FLAG_ENABLE
+    if(cellularmgr_Init() != RBUS_ERROR_SUCCESS)
+    {
+         CcspTraceError(("%s %d - Rbus Init failed !\n", __FUNCTION__, __LINE__ ));
+    }
+#endif
     return ANSC_STATUS_SUCCESS;
 }

@@ -108,7 +108,7 @@ int ANSC_EXPORT_API CellularMgr_DMLInit
     }
 
     pPlugInfo->uPluginVersion       = THIS_PLUGIN_VERSION;
-
+#ifndef RBUS_BUILD_FLAG_ENABLE
     /* Register the back-end apis for the data model */
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Cellular_GetParamBoolValue",  Cellular_GetParamBoolValue);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Cellular_SetParamBoolValue",  Cellular_SetParamBoolValue);
@@ -213,7 +213,7 @@ int ANSC_EXPORT_API CellularMgr_DMLInit
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Cellular_AccessPoint_Validate",  Cellular_AccessPoint_Validate);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Cellular_AccessPoint_Commit",  Cellular_AccessPoint_Commit);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Cellular_AccessPoint_Rollback",  Cellular_AccessPoint_Rollback);
-
+#endif
     g_pDslhDmlAgent                 = pPlugInfo->hDmlAgent;
     pGetParamValueByPathNameProc = (COSAGetParamValueByPathNameProc)pPlugInfo->AcquireFunction("COSAGetParamValueByPathName");
     if( pGetParamValueByPathNameProc != NULL)

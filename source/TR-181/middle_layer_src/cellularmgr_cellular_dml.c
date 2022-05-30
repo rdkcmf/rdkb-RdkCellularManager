@@ -3077,6 +3077,10 @@ UiccSlot_Synchronize
     PCELLULARMGR_CELLULAR_DATA  pMyObject      =  (PCELLULARMGR_CELLULAR_DATA) g_pBEManager->hCellular;
     PCELLULAR_DML_INFO          pstDmlCellular =  (PCELLULAR_DML_INFO) pMyObject->pstDmlCellular;
 
+    if (pstDmlCellular == NULL)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
     //Allocate DML Memory if already not created
     if( NULL == pstDmlCellular->pstUICCSlotInfo )
     {
@@ -3091,7 +3095,7 @@ UiccSlot_Synchronize
         }
     }
 
-    if( pstDmlCellular->ulUICCNoOfEntries > 0 )
+    if( ( pstDmlCellular->pstUICCSlotInfo != NULL ) && ( pstDmlCellular->ulUICCNoOfEntries > 0 ) )
     {
         UINT  i;
 
@@ -3134,6 +3138,11 @@ UiccSlot_GetEntryCount
 {   
     PCELLULARMGR_CELLULAR_DATA  pMyObject      =  (PCELLULARMGR_CELLULAR_DATA) g_pBEManager->hCellular;
     PCELLULAR_DML_INFO          pstDmlCellular =  (PCELLULAR_DML_INFO) pMyObject->pstDmlCellular;
+
+    if (pstDmlCellular == NULL)
+    {
+        return 0;
+    }
 
     return pstDmlCellular->ulUICCNoOfEntries;
 }
@@ -3178,7 +3187,15 @@ UiccSlot_GetEntry
 {    
     PCELLULARMGR_CELLULAR_DATA  pMyObject      =  (PCELLULARMGR_CELLULAR_DATA) g_pBEManager->hCellular;
     PCELLULAR_DML_INFO          pstDmlCellular =  (PCELLULAR_DML_INFO) pMyObject->pstDmlCellular;
+    if ((pstDmlCellular == NULL) || (pstDmlCellular->pstUICCSlotInfo == NULL))
+    {
+        return NULL;
+    }
     PCELLULAR_UICC_SLOT_INFO    pstUICCSlotInfo = &pstDmlCellular->pstUICCSlotInfo[nIndex];
+    if (pstUICCSlotInfo == NULL)
+    {
+        return NULL;
+    }
 
     pstUICCSlotInfo->uiInstanceNumber = nIndex + 1;
     *pInsNumber = pstUICCSlotInfo->uiInstanceNumber;
@@ -4390,6 +4407,11 @@ Cellular_AccessPoint_Synchronize
     PCELLULARMGR_CELLULAR_DATA  pMyObject      =  (PCELLULARMGR_CELLULAR_DATA) g_pBEManager->hCellular;
     PCELLULAR_DML_INFO          pstDmlCellular =  (PCELLULAR_DML_INFO) pMyObject->pstDmlCellular;
 
+    if (pstDmlCellular == NULL)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+
     CellularMgr_AccessPointGetProfileList( &(pstDmlCellular->pstAPInfo), (int*)&pstDmlCellular->ulAccessPointNoOfEntries);
 
     return ANSC_STATUS_SUCCESS;
@@ -4425,6 +4447,11 @@ Cellular_AccessPoint_GetEntryCount
 {   
     PCELLULARMGR_CELLULAR_DATA  pMyObject      =  (PCELLULARMGR_CELLULAR_DATA) g_pBEManager->hCellular;
     PCELLULAR_DML_INFO          pstDmlCellular =  (PCELLULAR_DML_INFO) pMyObject->pstDmlCellular;
+
+    if (pstDmlCellular == NULL)
+    {
+        return 0;
+    }
 
     return pstDmlCellular->ulAccessPointNoOfEntries;
 }
@@ -4469,6 +4496,11 @@ Cellular_AccessPoint_GetEntry
 {    
     PCELLULARMGR_CELLULAR_DATA  pMyObject      =  (PCELLULARMGR_CELLULAR_DATA) g_pBEManager->hCellular;
     PCELLULAR_DML_INFO          pstDmlCellular =  (PCELLULAR_DML_INFO) pMyObject->pstDmlCellular;
+
+    if ((pstDmlCellular == NULL) || (pstDmlCellular->pstAPInfo == NULL))
+    {
+        return NULL;
+    }
 
     *pInsNumber = nIndex + 1;
 

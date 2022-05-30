@@ -121,6 +121,13 @@ typedef enum _CELLULAR_INTERFACE_SIM_FORMFACTOR
 } 
 CELLULAR_INTERFACE_SIM_FORMFACTOR;
 
+typedef enum _CELLULAR_INTERFACE_ESIM_FORMFACTOR
+{
+   ESIM_M2FF = 1,
+   ESIM_ISIM
+}
+CELLULAR_INTERFACE_ESIM_FORMFACTOR;
+
 typedef enum _CELLULAR_INTERFACE_SIM_APPLICATION
 {
    APPLICATION_USIM = 1,
@@ -265,7 +272,7 @@ _CELLULAR_EUICC_SLOT_INFO
     BOOLEAN                             PowerEnable;
     CELLULAR_INTERFACE_SIM_STATUS       Status;
     CHAR                                Imei[16];
-    CELLULAR_INTERFACE_SIM_FORMFACTOR   FormFactor;
+    CELLULAR_INTERFACE_ESIM_FORMFACTOR  FormFactor;
     CELLULAR_INTERFACE_SIM_APPLICATION  Application;
     CHAR                                EIccid[CELLULAR_ICCID_MAX_LENGTH];
     ULONG                               ulMNOProfileNoOfEntries;
