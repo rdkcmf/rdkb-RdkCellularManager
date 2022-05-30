@@ -233,13 +233,6 @@ Cellular_GetParamUlongValue
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "X_RDK_RadioEnvConditions", TRUE))   
-    {
-        pstDmlCellular->X_RDK_RadioEnvConditions = CellularMgr_GetRadioEnvConditions( );
-        *puLong = pstDmlCellular->X_RDK_RadioEnvConditions;
-        return TRUE;
-    }
-
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
@@ -1947,11 +1940,11 @@ AvailableNetworks_GetParamStringValue
 
  APIs for Object:
 
-    Cellular.Interface.{i}.X_RDK_ServingCell.
+    Cellular.Interface.{i}.X_RDK_RadioSignal.
 
-    *  ServingCell_GetParamUlongValue
-    *  ServingCell_GetParamIntValue
-    *  ServingCell_GetParamStringValue
+    *  RadioSignal_GetParamUlongValue
+    *  RadioSignal_GetParamIntValue
+    *  RadioSignal_GetParamStringValue
 
 ***********************************************************************/
 /**********************************************************************  
@@ -1961,7 +1954,7 @@ AvailableNetworks_GetParamStringValue
     prototype: 
 
         BOOL
-        ServingCell_GetParamUlongValue
+        RadioSignal_GetParamUlongValue
             (
                 ANSC_HANDLE                 hInsContext,
                 char*                       ParamName,
@@ -1985,7 +1978,7 @@ AvailableNetworks_GetParamStringValue
 
 **********************************************************************/
 BOOL
-ServingCell_GetParamUlongValue
+RadioSignal_GetParamUlongValue
     (
         ANSC_HANDLE                 hInsContext,
         char*                       ParamName,
@@ -1995,7 +1988,7 @@ ServingCell_GetParamUlongValue
     PCELLULAR_INTERFACE_INFO            pstInterfaceInfo = (PCELLULAR_INTERFACE_INFO)hInsContext;
     PCELLULAR_INTERFACE_SERVING_INFO    pstServingInfo   = &(pstInterfaceInfo->stServingInfo);
 
-    CellularMgr_ServingCellGetSignalInfo( pstServingInfo );
+    CellularMgr_RadioSignalGetSignalInfo( pstServingInfo );
 
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Rat", TRUE))   
@@ -2010,6 +2003,13 @@ ServingCell_GetParamUlongValue
         return TRUE;
     }
     
+    if( AnscEqualString(ParamName, "RadioEnvConditions", TRUE))   
+    {
+        pstInterfaceInfo->RadioEnvConditions = CellularMgr_GetRadioEnvConditions( );
+        *puLong = pstInterfaceInfo->RadioEnvConditions;
+        return TRUE;
+    }
+
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
@@ -2021,7 +2021,7 @@ ServingCell_GetParamUlongValue
     prototype:
 
         BOOL
-        ServingCell_GetParamIntValue
+        RadioSignal_GetParamIntValue
             (   
                 ANSC_HANDLE                 hInsContext,
                 char*                       ParamName,
@@ -2046,7 +2046,7 @@ ServingCell_GetParamUlongValue
 **********************************************************************/
 
 BOOL
-ServingCell_GetParamIntValue
+RadioSignal_GetParamIntValue
     (
         ANSC_HANDLE                 hInsContext,
         char*                       ParamName,
@@ -2056,30 +2056,37 @@ ServingCell_GetParamIntValue
     PCELLULAR_INTERFACE_INFO            pstInterfaceInfo = (PCELLULAR_INTERFACE_INFO)hInsContext;
     PCELLULAR_INTERFACE_SERVING_INFO    pstServingInfo   = &(pstInterfaceInfo->stServingInfo);
 
-    CellularMgr_ServingCellGetSignalInfo( pstServingInfo );
+    CellularMgr_RadioSignalGetSignalInfo( pstServingInfo );
 
     /* check the parameter name and return the corresponding value */
-    if( AnscEqualString(ParamName, "TotalReceivedSignal", TRUE))
+    if( AnscEqualString(ParamName, "Rssi", TRUE))
     {
-        *pInt = pstServingInfo->TotalReceivedSignal;
+        *pInt = pstServingInfo->Rssi;
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "SignalToNoiseRatio", TRUE))
+    if( AnscEqualString(ParamName, "Snr", TRUE))
     {
-        *pInt = pstServingInfo->SignalToNoiseRatio;
+        *pInt = pstServingInfo->Snr;
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "ReceivedSignal", TRUE))
+    if( AnscEqualString(ParamName, "Rsrp", TRUE))
     {
-        *pInt = pstServingInfo->ReceivedSignal;
+        *pInt = pstServingInfo->Rsrp;
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "ReceivedSignalQuality", TRUE))
+    if( AnscEqualString(ParamName, "Rsrq", TRUE))
     {
-        *pInt = pstServingInfo->ReceivedSignalQuality;
+        *pInt = pstServingInfo->Rsrq;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "Trx", TRUE))
+    {
+        //TODO: update hal function
+        *pInt = 0;
         return TRUE;
     }
 
@@ -2093,7 +2100,7 @@ ServingCell_GetParamIntValue
     prototype: 
 
         ULONG
-        ServingCell_GetParamStringValue
+        RadioSignal_GetParamStringValue
             (
                 ANSC_HANDLE                 hInsContext,
                 char*                       ParamName,
@@ -2125,7 +2132,7 @@ ServingCell_GetParamIntValue
 
 **********************************************************************/
 ULONG
-ServingCell_GetParamStringValue
+RadioSignal_GetParamStringValue
     (
         ANSC_HANDLE                 hInsContext,
         char*                       ParamName,
@@ -2136,7 +2143,7 @@ ServingCell_GetParamStringValue
     PCELLULAR_INTERFACE_INFO            pstInterfaceInfo = (PCELLULAR_INTERFACE_INFO)hInsContext;
     PCELLULAR_INTERFACE_SERVING_INFO    pstServingInfo   = &(pstInterfaceInfo->stServingInfo);
 
-    CellularMgr_ServingCellGetSignalInfo( pstServingInfo );
+    CellularMgr_RadioSignalGetSignalInfo( pstServingInfo );
 
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "CellId", TRUE))

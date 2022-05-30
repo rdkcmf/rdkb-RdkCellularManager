@@ -322,7 +322,6 @@ ANSC_STATUS DmlCellularInitialize ( ANSC_HANDLE  hDml )
     pstDmlCellular->X_RDK_Enable                 = TRUE;
     pstDmlCellular->X_RDK_Status                 = RDK_STATUS_DOWN;
     pstDmlCellular->X_RDK_ControlInterfaceStatus = CONTROL_STATUS_CLOSED;
-    pstDmlCellular->X_RDK_RadioEnvConditions     = RADIO_ENV_CONDITION_UNAVAILABLE;
     pstDmlCellular->X_RDK_DataInterfaceLink      = DATA_INTERFACE_LINK_RAW_IP;
 
     pstDmlCellular->ulInterfaceNoEntries        = 1;
@@ -341,6 +340,7 @@ ANSC_STATUS DmlCellularInitialize ( ANSC_HANDLE  hDml )
         pstInterfaceInfo->Enable              = TRUE;
         pstInterfaceInfo->Status              = IF_DOWN;
         pstInterfaceInfo->X_RDK_RegisteredService = REGISTERED_SERVICE_NONE; 
+        pstInterfaceInfo->RadioEnvConditions     = RADIO_ENV_CONDITION_UNAVAILABLE;
 
         pstInterfaceInfo->stPlmnAccessInfo.RoamingStatus  = ROAMING_STATUS_HOME;
         pstInterfaceInfo->stPlmnAccessInfo.ulAvailableNetworkNoOfEntries  = 0;
@@ -826,16 +826,16 @@ CELLULAR_RADIO_ENV_CONDITIONS CellularMgr_GetRadioEnvConditions( void )
     return enRadioEnvCondition;
 }
 
-int CellularMgr_ServingCellGetSignalInfo( CELLULAR_INTERFACE_SERVING_INFO *pstServingInfo )
+int CellularMgr_RadioSignalGetSignalInfo( CELLULAR_INTERFACE_SERVING_INFO *pstServingInfo )
 {
     CellularSignalInfoStruct stSignalInfo = { 0 };
 
     if( RETURN_OK == cellular_hal_get_signal_info( &stSignalInfo ) )
     {
-        pstServingInfo->TotalReceivedSignal   = stSignalInfo.RSSI;
-        pstServingInfo->SignalToNoiseRatio    = stSignalInfo.SNR;
-        pstServingInfo->ReceivedSignal        = stSignalInfo.RSRP;
-        pstServingInfo->ReceivedSignalQuality = stSignalInfo.RSRQ;
+        pstServingInfo->Rssi   = stSignalInfo.RSSI;
+        pstServingInfo->Snr    = stSignalInfo.SNR;
+        pstServingInfo->Rsrp   = stSignalInfo.RSRP;
+        pstServingInfo->Rsrq   = stSignalInfo.RSRQ;
     }
 
     return RETURN_OK;

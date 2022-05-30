@@ -194,10 +194,10 @@ _CELLULAR_INTERFACE_SERVING_INFO
    UINT                                   Rfcn;
    CHAR                                   PlmnId[64];
    CHAR                                   AreaCode[64];
-   INT                                    TotalReceivedSignal;
-   INT                                    SignalToNoiseRatio;
-   INT                                    ReceivedSignal;
-   INT                                    ReceivedSignalQuality;
+   INT                                    Rssi;
+   INT                                    Snr;
+   INT                                    Rsrp;
+   INT                                    Rsrq;
 }
 CELLULAR_INTERFACE_SERVING_INFO,  *PCELLULAR_INTERFACE_SERVING_INFO;
 
@@ -341,6 +341,7 @@ _CELLULAR_INTERFACE_INFO
     ULONG                                       ulContextProfileNoOfEntries;
     PCELLULAR_INTERFACE_CONTEXTPROFILE_INFO     pstContextProfileInfo; 
     CELLULAR_INTERFACE_STATS_INFO               stStatsInfo;
+    CELLULAR_RADIO_ENV_CONDITIONS               RadioEnvConditions;
 }
 CELLULAR_INTERFACE_INFO,  *PCELLULAR_INTERFACE_INFO;
 
@@ -358,7 +359,6 @@ _CELLULAR_DML_INFO
     CELLULAR_CONTROL_INTERFACE_STATUS      X_RDK_ControlInterfaceStatus;
     CHAR                                   X_RDK_DataInterface[10];
     CELLULAR_DATA_INTERFACE_LINK           X_RDK_DataInterfaceLink;
-    CELLULAR_RADIO_ENV_CONDITIONS          X_RDK_RadioEnvConditions;
     CHAR                                   X_RDK_Imei[16];
     ULONG                                  ulInterfaceNoEntries;
     PCELLULAR_INTERFACE_INFO               pstInterfaceInfo;
@@ -396,7 +396,7 @@ int CellularMgr_AccessPointDeleteProfile( PCELLULAR_INTERFACE_ACCESSPOINT_INFO p
 
 int CellularMgr_AccessPointModifyProfile( PCELLULAR_INTERFACE_ACCESSPOINT_INFO pstAPInfo );
 
-int CellularMgr_ServingCellGetSignalInfo( CELLULAR_INTERFACE_SERVING_INFO *pstServingInfo );
+int CellularMgr_RadioSignalGetSignalInfo( CELLULAR_INTERFACE_SERVING_INFO *pstServingInfo );
 
 int CellularMgr_ServingSystemInfo( CELLULAR_INTERFACE_INFO  *pstInterfaceInfo, CELLULAR_INTERFACE_CONTEXTPROFILE_INFO *pstContextProfileInfo);
 

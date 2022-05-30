@@ -362,15 +362,15 @@ AvailableNetworks_GetParamStringValue
 
  APIs for Object:
 
-    Cellular.Interface.{i}.X_RDK_ServingCell.
+    Cellular.Interface.{i}.X_RDK_RadioSignal.
 
-    *  ServingCell_GetParamUlongValue
-    *  ServingCell_GetParamIntValue
-    *  ServingCell_GetParamStringValue
+    *  RadioSignal_GetParamUlongValue
+    *  RadioSignal_GetParamIntValue
+    *  RadioSignal_GetParamStringValue
 
 ***********************************************************************/
 BOOL
-ServingCell_GetParamUlongValue
+RadioSignal_GetParamUlongValue
     (
         ANSC_HANDLE                 hInsContext,
         char*                       ParamName,
@@ -378,7 +378,7 @@ ServingCell_GetParamUlongValue
     );
 
 ULONG
-ServingCell_GetParamStringValue
+RadioSignal_GetParamStringValue
     (
         ANSC_HANDLE                 hInsContext,
         char*                       ParamName,
@@ -387,7 +387,7 @@ ServingCell_GetParamStringValue
     );
 
 BOOL
-ServingCell_GetParamIntValue
+RadioSignal_GetParamIntValue
     (
         ANSC_HANDLE                 hInsContext,
         char*                       ParamName,

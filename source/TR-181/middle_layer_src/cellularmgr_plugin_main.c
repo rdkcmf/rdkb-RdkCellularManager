@@ -149,6 +149,10 @@ int ANSC_EXPORT_API CellularMgr_DMLInit
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "AvailableNetworks_GetParamBoolValue",  AvailableNetworks_GetParamBoolValue);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "AvailableNetworks_GetParamStringValue",  AvailableNetworks_GetParamStringValue);
 
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "RadioSignal_GetParamUlongValue",  RadioSignal_GetParamUlongValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "RadioSignal_GetParamIntValue",  RadioSignal_GetParamIntValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "RadioSignal_GetParamStringValue",  RadioSignal_GetParamStringValue);
+
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "NeighborCell_GetEntryCount",  NeighborCell_GetEntryCount);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "NeighborCell_GetEntry",  NeighborCell_GetEntry);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "NeighborCell_IsUpdated",  NeighborCell_IsUpdated);

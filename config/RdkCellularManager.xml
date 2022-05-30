@@ -84,11 +84,6 @@
                     <type>string: IP_RAW(1),802.3(2)</type>
                     <syntax>uint32/mapped</syntax>
                 </parameter>
-                <parameter>
-                    <name>X_RDK_RadioEnvConditions</name>
-                    <type>string: EXCELLENT(1),GOOD(2),FAIR(3),POOR(4),UNAVAILABLE(5)</type>
-                    <syntax>uint32/mapped</syntax>
-                </parameter>
 		<parameter>
                     <name>CellularConfig</name>
                     <type>string</type>
@@ -366,12 +361,12 @@
                                     </objects>
                                 </object>
                             <object>
-                                <name>X_RDK_ServingCell</name>
+                                <name>X_RDK_RadioSignal</name>
                                 <objectType>object</objectType>
                                 <functions>
-                                    <func_GetParamUlongValue>ServingCell_GetParamUlongValue</func_GetParamUlongValue>
-                                    <func_GetParamIntValue>ServingCell_GetParamIntValue</func_GetParamIntValue>
-                                    <func_GetParamStringValue>ServingCell_GetParamStringValue</func_GetParamStringValue>
+                                    <func_GetParamUlongValue>RadioSignal_GetParamUlongValue</func_GetParamUlongValue>
+                                    <func_GetParamIntValue>RadioSignal_GetParamIntValue</func_GetParamIntValue>
+                                    <func_GetParamStringValue>RadioSignal_GetParamStringValue</func_GetParamStringValue>
                                 </functions>
                                 <parameters>
                                     <parameter>
@@ -400,24 +395,34 @@
                                         <syntax>string</syntax>
                                     </parameter>
                                     <parameter>
-                                        <name>TotalReceivedSignal</name>
+                                        <name>Rssi</name>
                                         <type>int</type>
                                         <syntax>int</syntax>
                                     </parameter>
                                     <parameter>
-                                        <name>SignalToNoiseRatio</name>
+                                        <name>Snr</name>
                                         <type>int</type>
                                         <syntax>int</syntax>
                                     </parameter>
                                     <parameter>
-                                        <name>ReceivedSignal</name>
+                                        <name>Rsrp</name>
                                         <type>int</type>
                                         <syntax>int</syntax>
                                     </parameter>
                                     <parameter>
-                                        <name>ReceivedSignalQuality</name>
+                                        <name>Rsrq</name>
                                         <type>int</type>
                                         <syntax>int</syntax>
+                                    </parameter>
+                                    <parameter>
+                                        <name>Trx</name>
+                                        <type>int</type>
+                                        <syntax>int</syntax>
+                                    </parameter>
+                                    <parameter>
+                                        <name>RadioEnvConditions</name>
+                                        <type>string: EXCELLENT(1),GOOD(2),FAIR(3),POOR(4),UNAVAILABLE(5)</type>
+                                        <syntax>uint32/mapped</syntax>
                                     </parameter>
                                 </parameters>
                             </object>
