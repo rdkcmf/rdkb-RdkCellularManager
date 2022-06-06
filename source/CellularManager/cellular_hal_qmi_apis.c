@@ -252,6 +252,7 @@ typedef struct
     gint8                           lte_rsrq;
     gint16                          lte_rsrp;
     gint16                          lte_snr;
+    gint32                          tx_power;
     guint8                          bIsSignalInfoCollectionDone;
     CellularDeviceNASStatus_t       enNASRegistrationStatus;
     guint8                          bIsModemRegTaskStillRunning;
@@ -832,6 +833,49 @@ static void cellular_hal_qmi_client_device_open_wds (QmiDevice *device, GAsyncRe
     cellular_hal_qmi_device_open_step(task);
 }
 
+static void cellular_hal_qmi_get_transmit_receive_info ( QmiClientNas *nasClient,
+                                                               GAsyncResult *result,
+                                                               gpointer user_data )
+{
+    ContextNASInfo *nasCtx = (ContextNASInfo*)user_data;
+    QmiMessageNasGetTxRxInfoOutput *output;
+    GError *error = NULL;
+    gboolean is_in_traffic;
+    gint32 power;
+    
+    output = qmi_client_nas_get_tx_rx_info_finish (nasClient, result, &error);
+    if (!output) 
+    { 
+        CELLULAR_HAL_DBG_PRINT("%s TX/RD info get functionality failed: %s\n",__FUNCTION__,error->message);
+        g_error_free (error);
+        nasCtx->bIsSignalInfoCollectionDone  = TRUE;
+        return;
+    }
+
+    if (!qmi_message_nas_get_tx_rx_info_output_get_result (output, &error)) 
+    {
+        CELLULAR_HAL_DBG_PRINT("%s failed to get TX/RX info: %s\n",__FUNCTION__,error->message);
+        g_error_free (error);
+        qmi_message_nas_get_tx_rx_info_output_unref (output);
+        nasCtx->bIsSignalInfoCollectionDone  = TRUE;
+        return;
+    }
+
+    /* TX Channel */
+    if (qmi_message_nas_get_tx_rx_info_output_get_tx_info (
+            output,
+            &is_in_traffic,
+            &power,
+            NULL)) 
+    {
+        nasCtx->tx_power = (is_in_traffic) ? (0.1) * ((gdouble)power) : 0;
+        CELLULAR_HAL_DBG_PRINT("%s Successfully got TX Power info, level is '%.1lf dBm'\n",__FUNCTION__,nasCtx->tx_power );
+    }
+
+    qmi_message_nas_get_tx_rx_info_output_unref (output);
+    nasCtx->bIsSignalInfoCollectionDone  = TRUE;
+}
+
 static void cellular_hal_qmi_get_network_signal_information_cb (QmiClientNas *nasClient, GAsyncResult *result, gpointer  user_data)
 {
     ContextNASInfo *nasCtx = (ContextNASInfo*)user_data;
@@ -877,7 +921,35 @@ static void cellular_hal_qmi_get_network_signal_information_cb (QmiClientNas *na
         nasCtx->lte_snr  = (0.1) * ((gdouble)iSNR);
     }
 
-    nasCtx->bIsSignalInfoCollectionDone  = TRUE;
+    nasCtx->tx_power = 0;
+
+    /* Collect TX Power Level */
+    {
+        QmiMessageNasGetTxRxInfoInput *input;
+        GError *error = NULL;
+
+        input = qmi_message_nas_get_tx_rx_info_input_new ();
+        if (!qmi_message_nas_get_tx_rx_info_input_set_radio_interface ( input,
+                                                                        QMI_NAS_RADIO_INTERFACE_LTE,
+                                                                        &error)) 
+        {
+            CELLULAR_HAL_DBG_PRINT("%s error: couldn't create input data bundle: '%s'\n",
+                                    __FUNCTION__,
+                                    error->message);
+            g_error_free (error);
+            qmi_message_nas_get_tx_rx_info_input_unref (input);
+            nasCtx->bIsSignalInfoCollectionDone = TRUE;
+            return;
+        }
+
+        qmi_client_nas_get_tx_rx_info(QMI_CLIENT_NAS(nasCtx->nasClient),
+                                      input,
+                                      10,
+                                      NULL,
+                                      (GAsyncReadyCallback)cellular_hal_qmi_get_transmit_receive_info,
+                                      user_data);
+        qmi_message_nas_get_tx_rx_info_input_unref (input);
+    }
 }
 
 int cellular_hal_qmi_get_network_signal_information(CellularSignalInfoStruct *signal_info)
@@ -917,13 +989,15 @@ int cellular_hal_qmi_get_network_signal_information(CellularSignalInfoStruct *si
                     signal_info->RSRQ = nasCtx->lte_rsrq;
                     signal_info->RSRP = nasCtx->lte_rsrp;
                     signal_info->SNR  = nasCtx->lte_snr;
+                    signal_info->TXPower = nasCtx->tx_power;
 
-                    CELLULAR_HAL_DBG_PRINT("%s Signal Info Collection Done. RSSI:%d RSRQ:%d RSRP:%d SNR:%d\n",
+                    CELLULAR_HAL_DBG_PRINT("%s Signal Info Collection Done. RSSI:%d RSRQ:%d RSRP:%d SNR:%d TX_POWER:%d\n",
                                                                             __FUNCTION__,
                                                                             signal_info->RSSI,
                                                                             signal_info->RSRQ,
                                                                             signal_info->RSRP,
-                                                                            signal_info->SNR);
+                                                                            signal_info->SNR,
+                                                                            signal_info->TXPower);
                     break;
                 }
 

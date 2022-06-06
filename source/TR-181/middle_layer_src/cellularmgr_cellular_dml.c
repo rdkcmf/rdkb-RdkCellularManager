@@ -2085,8 +2085,7 @@ RadioSignal_GetParamIntValue
 
     if( AnscEqualString(ParamName, "Trx", TRUE))
     {
-        //TODO: update hal function
-        *pInt = 0;
+        *pInt = pstServingInfo->Trx;
         return TRUE;
     }
 

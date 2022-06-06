@@ -198,6 +198,7 @@ _CELLULAR_INTERFACE_SERVING_INFO
    INT                                    Snr;
    INT                                    Rsrp;
    INT                                    Rsrq;
+   INT                                    Trx;
 }
 CELLULAR_INTERFACE_SERVING_INFO,  *PCELLULAR_INTERFACE_SERVING_INFO;
 

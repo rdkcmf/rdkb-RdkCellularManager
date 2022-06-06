@@ -289,6 +289,7 @@ typedef  struct
     int                         RSRQ;
     int                         RSRP;
     int                         SNR;
+    int                         TXPower;
 
 } CellularSignalInfoStruct;
 

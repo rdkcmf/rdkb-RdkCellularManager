@@ -836,6 +836,7 @@ int CellularMgr_RadioSignalGetSignalInfo( CELLULAR_INTERFACE_SERVING_INFO *pstSe
         pstServingInfo->Snr    = stSignalInfo.SNR;
         pstServingInfo->Rsrp   = stSignalInfo.RSRP;
         pstServingInfo->Rsrq   = stSignalInfo.RSRQ;
+        pstServingInfo->Trx    = stSignalInfo.TXPower;
     }
 
     return RETURN_OK;
