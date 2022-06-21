@@ -88,5 +88,7 @@ int cellular_hal_qmi_get_packet_statistics( CellularPacketStatsStruct *packet_st
 int cellular_hal_qmi_get_current_modem_interface_status( CellularInterfaceStatus_t *status );
 int cellular_hal_qmi_set_modem_network_operation( NASAttachDetachOperation_t network_operation);
 int cellular_hal_qmi_get_modem_firmware_version(char *firmware_version);
+int cellular_hal_qmi_get_current_plmn_information(CellularCurrentPlmnInfoStruct *plmn_info);
+int cellular_hal_qmi_get_available_networks_information(CellularNetworkScanResultInfoStruct **network_info, unsigned int *total_network_count);
 
 #endif //_CELLULAR_HAL_QMI_APIS_H_

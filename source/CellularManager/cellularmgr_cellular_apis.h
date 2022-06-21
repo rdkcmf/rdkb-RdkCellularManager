@@ -40,6 +40,7 @@
 /* Accesspoint list should be populated for below TTL interval */
 #define CELLULAR_ACCESSPOINT_LIST_REFRESH_THRESHOLD      (120)
 #define CELLULAR_UICCSLOT_LIST_REFRESH_THRESHOLD         (30)
+#define CELLULAR_AVAILABLE_NETWORK_LIST_REFRESH_THRESHOLD (60)
 
 #define CELLULAR_RADIO_ENV_EXCELLENT_THRESHOLD           (-85)
 #define CELLULAR_RADIO_ENV_GOOD_THRESHOLD_HIGH           (-85)
@@ -159,6 +160,7 @@ _CELLULAR_INTERFACE_ACCESSPOINT_INFO
     CellularPDPNetworkConfig_t            X_RDK_PdpInterfaceConfig;
     UINT                                  ProfileIndex;
     UINT                                  PDPContextNumber;
+    BOOLEAN                               X_RDK_Roaming;
 }
 CELLULAR_INTERFACE_ACCESSPOINT_INFO,  *PCELLULAR_INTERFACE_ACCESSPOINT_INFO;
 
@@ -285,6 +287,33 @@ _CELLULAR_UICC_SLOT_INFO
 CELLULAR_UICC_SLOT_INFO,  *PCELLULAR_UICC_SLOT_INFO;
 
 typedef  struct
+_CELLULAR_PLMN_AVAILABLENETWORK_INFO                                         
+{
+    CHAR                                        MCC[8];
+    CHAR                                        MNC[8];
+    CHAR                                        Name[16];
+    BOOLEAN                                     Allowed;
+}
+CELLULAR_PLMN_AVAILABLENETWORK_INFO,  *PCELLULAR_PLMN_AVAILABLENETWORK_INFO;
+
+typedef  struct
+_CELLULAR_PLMNACCESS_INFO                                         
+{
+    BOOLEAN                                     RoamingEnable;
+    CELLULAR_INTERFACE_ROAMING_STATUS           RoamingStatus;
+    CHAR                                        HomeNetwork_MCC[8];
+    CHAR                                        HomeNetwork_MNC[8];
+    CHAR                                        HomeNetwork_Name[16];
+    CHAR                                        NetworkInUse_MCC[8];
+    CHAR                                        NetworkInUse_MNC[8];
+    CHAR                                        NetworkInUse_Name[16];
+    ULONG                                       ulAvailableNetworkListLastUpdatedTime;
+    UINT                                        ulAvailableNetworkNoOfEntries;
+    PCELLULAR_PLMN_AVAILABLENETWORK_INFO        pstAvailableNetworks;
+}
+CELLULAR_PLMNACCESS_INFO,  *PCELLULAR_PLMNACCESS_INFO;
+
+typedef  struct
 _CELLULAR_INTERFACE_INFO                                         
 {
     BOOLEAN                                     Enable;
@@ -300,21 +329,12 @@ _CELLULAR_INTERFACE_INFO
     UINT                                        RegistrationRetries;
     UINT                                        MaxRegistrationRetries;
     UINT                                        RegistrationRetryTimer;
-    BOOLEAN                                     RoamingEnable;
-    CELLULAR_INTERFACE_ROAMING_STATUS           RoamingStatus;
     CHAR                                        Imei[16];
     CHAR                                        Iccid[CELLULAR_ICCID_MAX_LENGTH];
     CHAR                                        SupportedAccessTechnologies[256];
     CHAR                                        PreferedAccessTechnologies[256];
     CHAR                                        CurrentAccessTechnology[256];
-    CHAR                                        AvailableNetworks[256];
-    CHAR                                        NetworkInUse[64];
-    CHAR                                        HomeNetwork_MCC[8];
-    CHAR                                        HomeNetwork_MNC[8];
-    CHAR                                        HomeNetwork_Description[16];
-    CHAR                                        NetworkInUse_MCC[8];
-    CHAR                                        NetworkInUse_MNC[8];
-    CHAR                                        NetworkInUse_Description[16];
+    CELLULAR_PLMNACCESS_INFO                    stPlmnAccessInfo;
     CELLULAR_INTERFACE_SERVING_INFO             stServingInfo;
     ULONG                                       ulNeighbourNoOfEntries;
     PCELLULAR_INTERFACE_NEIGHBOUR_INFO          pstNeighbourInfo;
@@ -407,5 +427,9 @@ int CellularMgr_GetUICCSlotInfo(UINT uiSlotID, PCELLULAR_UICC_SLOT_INFO  pstUICC
 int CellularMgr_GetActiveCardStatus( CELLULAR_INTERFACE_SIM_STATUS *enCardStatus );
 
 int CellularMgr_GetModemFirmwareVersion(char *pcFirmwareVersion);
+
+int CellularMgr_GetPlmnInformation( PCELLULAR_PLMNACCESS_INFO pstPlmnAccessInfo);
+
+int CellularMgr_GetAvailableNetworksInformation( PCELLULAR_PLMN_AVAILABLENETWORK_INFO *ppAvailableNetworkInfo, unsigned int *puiTotalCount );
 
 #endif //_CELLULARMGR_CELLULAR_APIS_H_

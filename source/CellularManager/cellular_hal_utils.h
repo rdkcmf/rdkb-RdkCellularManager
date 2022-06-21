@@ -47,5 +47,6 @@
 
 unsigned char cellular_hal_util_IsDeviceFileExists (const char *devname);
 unsigned long cellular_hal_util_GetCurrentTimeInSeconds( void );
+int cellular_hal_util_GetUptime(unsigned long *time);
 
 #endif //_CELLULAR_HAL_UTILS_H_

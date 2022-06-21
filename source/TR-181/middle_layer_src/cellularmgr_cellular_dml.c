@@ -848,12 +848,6 @@ Cellular_Interface_GetParamBoolValue
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "RoamingEnable", TRUE))
-    {
-        *pBool = pstInterfaceInfo->RoamingEnable;
-        return TRUE;
-    }
-
     if( AnscEqualString(ParamName, "Upstream", TRUE) )
     {
         *pBool = pstInterfaceInfo->Upstream;
@@ -953,12 +947,6 @@ Cellular_Interface_SetParamBoolValue
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "RoamingEnable", TRUE))
-    {
-        pstInterfaceInfo->RoamingEnable = bValue;
-        return TRUE;
-    }
-
     if( AnscEqualString(ParamName, "Upstream", TRUE))
     {
         pstInterfaceInfo->Upstream = bValue;
@@ -1022,13 +1010,6 @@ Cellular_Interface_GetParamUlongValue
     {
         CellularMgrGetNetworkRegisteredService(&pstInterfaceInfo->X_RDK_RegisteredService);
         *puLong = pstInterfaceInfo->X_RDK_RegisteredService;
-        return TRUE;
-    }
-
-    if( AnscEqualString(ParamName, "RoamingStatus", TRUE))   
-    {
-        CellularMgr_ServingSystemInfo (pstInterfaceInfo, NULL);
-        *puLong = pstInterfaceInfo->RoamingStatus;
         return TRUE;
     }
 
@@ -1211,13 +1192,6 @@ Cellular_Interface_GetParamStringValue
     {
         /* collect value */
         AnscCopyString(pValue, pstInterfaceInfo->CurrentAccessTechnology);
-        return 0;
-    }
-
-    if( AnscEqualString(ParamName, "AvailableNetworks", TRUE))
-    {
-        /* collect value */
-        AnscCopyString(pValue, pstInterfaceInfo->AvailableNetworks);
         return 0;
     }
 
@@ -1425,6 +1399,109 @@ Identification_GetParamStringValue
 
     prototype: 
 
+        BOOL
+        PlmnAccess_GetParamUlongValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                ULONG*                      puLong
+            );
+
+    description:
+
+        This function is called to retrieve ULONG parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                ULONG*                      puLong
+                The buffer of returned ULONG value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+PlmnAccess_GetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG*                      puLong
+    )
+{    
+    PCELLULAR_INTERFACE_INFO     pstInterfaceInfo = (PCELLULAR_INTERFACE_INFO)hInsContext;
+    PCELLULAR_PLMNACCESS_INFO    pstPlmnInfo      = &(pstInterfaceInfo->stPlmnAccessInfo);
+
+    CellularMgr_GetPlmnInformation(pstPlmnInfo);
+
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "RoamingStatus", TRUE))   
+    {
+        *puLong = pstPlmnInfo->RoamingStatus;
+        return TRUE;
+    }
+
+    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return FALSE;
+}
+
+/**********************************************************************
+    caller:     owner of this object
+
+    prototype:
+        BOOL
+        PlmnAccess_GetParamBoolValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                BOOL*                       pBool
+            );
+
+    description:
+        This function is called to retrieve Boolean parameter value;
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                BOOL*                       pBool
+                The buffer of returned boolean value;
+
+    return:     TRUE if succeeded.
+**********************************************************************/
+BOOL
+PlmnAccess_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    )
+{
+    PCELLULAR_INTERFACE_INFO     pstInterfaceInfo = (PCELLULAR_INTERFACE_INFO)hInsContext;
+    PCELLULAR_PLMNACCESS_INFO    pstPlmnInfo      = &(pstInterfaceInfo->stPlmnAccessInfo);
+    
+    CellularMgr_GetPlmnInformation(pstPlmnInfo);
+
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "RoamingEnable", TRUE) )
+    {
+        *pBool = pstPlmnInfo->RoamingEnable;
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
         ULONG
         HomeNetwork_GetParamStringValue
             (
@@ -1466,27 +1543,30 @@ HomeNetwork_GetParamStringValue
         ULONG*                      pUlSize
     )
 {
-    PCELLULAR_INTERFACE_INFO        pstInterfaceInfo = (PCELLULAR_INTERFACE_INFO)hInsContext;
+    PCELLULAR_INTERFACE_INFO     pstInterfaceInfo = (PCELLULAR_INTERFACE_INFO)hInsContext;
+    PCELLULAR_PLMNACCESS_INFO    pstPlmnInfo      = &(pstInterfaceInfo->stPlmnAccessInfo);
+
+    CellularMgr_GetPlmnInformation(pstPlmnInfo);
 
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Mcc", TRUE))
     {
         /* collect value */
-        AnscCopyString(pValue, pstInterfaceInfo->HomeNetwork_MCC);
+        AnscCopyString(pValue, pstPlmnInfo->HomeNetwork_MCC);
         return 0;
     }
 
     if( AnscEqualString(ParamName, "Mnc", TRUE))
     {
         /* collect value */
-        AnscCopyString(pValue, pstInterfaceInfo->HomeNetwork_MNC);
+        AnscCopyString(pValue, pstPlmnInfo->HomeNetwork_MNC);
         return 0;
     }
 
-    if( AnscEqualString(ParamName, "Description", TRUE))
+    if( AnscEqualString(ParamName, "Name", TRUE))
     {
         /* collect value */
-        AnscCopyString(pValue, pstInterfaceInfo->HomeNetwork_Description);
+        AnscCopyString(pValue, pstPlmnInfo->HomeNetwork_Name);
         return 0;
     }
 
@@ -1540,27 +1620,323 @@ NetworkInUse_GetParamStringValue
         ULONG*                      pUlSize
     )
 {
-    PCELLULAR_INTERFACE_INFO        pstInterfaceInfo = (PCELLULAR_INTERFACE_INFO)hInsContext;
+    PCELLULAR_INTERFACE_INFO     pstInterfaceInfo = (PCELLULAR_INTERFACE_INFO)hInsContext;
+    PCELLULAR_PLMNACCESS_INFO    pstPlmnInfo      = &(pstInterfaceInfo->stPlmnAccessInfo);
+
+    CellularMgr_GetPlmnInformation(pstPlmnInfo);
 
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Mcc", TRUE))
     {
         /* collect value */
-        AnscCopyString(pValue, pstInterfaceInfo->NetworkInUse_MCC);
+        AnscCopyString(pValue, pstPlmnInfo->NetworkInUse_MCC);
         return 0;
     }
 
     if( AnscEqualString(ParamName, "Mnc", TRUE))
     {
         /* collect value */
-        AnscCopyString(pValue, pstInterfaceInfo->NetworkInUse_MNC);
+        AnscCopyString(pValue, pstPlmnInfo->NetworkInUse_MNC);
         return 0;
     }
 
-    if( AnscEqualString(ParamName, "Description", TRUE))
+    if( AnscEqualString(ParamName, "Name", TRUE))
     {
         /* collect value */
-        AnscCopyString(pValue, pstInterfaceInfo->NetworkInUse_Description);
+        AnscCopyString(pValue, pstPlmnInfo->NetworkInUse_Name);
+        return 0;
+    }
+
+    return -1;
+}
+
+/***********************************************************************
+
+ APIs for Object:
+
+    Cellular.Interface.{i}.X_RDK_PlmnAccess.AvailableNetworks.{i}.
+
+    *  AvailableNetworks_IsUpdated
+    *  AvailableNetworks_Synchronize
+    *  AvailableNetworks_GetEntryCount
+    *  AvailableNetworks_GetEntry
+    *  AvailableNetworks_GetParamBoolValue
+    *  AvailableNetworks_GetParamStringValue
+
+***********************************************************************/
+
+/**********************************************************************
+
+    caller:     owner of this object
+
+    prototype:
+
+        BOOL
+        AvailableNetworks_IsUpdated
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+
+        This function is checking whether the table is updated or not.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     TRUE or FALSE.
+
+**********************************************************************/
+BOOL
+AvailableNetworks_IsUpdated
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+    PCELLULAR_INTERFACE_INFO     pstInterfaceInfo = (PCELLULAR_INTERFACE_INFO)hInsContext;
+    PCELLULAR_PLMNACCESS_INFO    pstPlmnInfo      = &(pstInterfaceInfo->stPlmnAccessInfo);
+
+	if ( ( AnscGetTickInSeconds() - pstPlmnInfo->ulAvailableNetworkListLastUpdatedTime ) < CELLULAR_AVAILABLE_NETWORK_LIST_REFRESH_THRESHOLD )
+    {
+		return FALSE;
+    }
+	else 
+    {
+    	pstPlmnInfo->ulAvailableNetworkListLastUpdatedTime =  AnscGetTickInSeconds();
+    	return TRUE;
+	}	
+}
+
+/**********************************************************************
+
+    caller:     owner of this object
+
+    prototype:
+
+        ULONG
+        AvailableNetworks_Synchronize
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+
+        This function is called to synchronize the table.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The status of the operation.
+
+**********************************************************************/
+ULONG
+AvailableNetworks_Synchronize
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{    
+    PCELLULAR_INTERFACE_INFO     pstInterfaceInfo = (PCELLULAR_INTERFACE_INFO)hInsContext;
+    PCELLULAR_PLMNACCESS_INFO    pstPlmnInfo      = &(pstInterfaceInfo->stPlmnAccessInfo);
+
+    CellularMgr_GetAvailableNetworksInformation( &pstPlmnInfo->pstAvailableNetworks, &pstPlmnInfo->ulAvailableNetworkNoOfEntries );
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        AvailableNetworks_GetEntryCount
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+
+        This function is called to retrieve the count of the table.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The count of the table
+
+**********************************************************************/
+ULONG
+AvailableNetworks_GetEntryCount
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{   
+    PCELLULAR_INTERFACE_INFO     pstInterfaceInfo = (PCELLULAR_INTERFACE_INFO)hInsContext;
+    PCELLULAR_PLMNACCESS_INFO    pstPlmnInfo      = &(pstInterfaceInfo->stPlmnAccessInfo);
+
+    return pstPlmnInfo->ulAvailableNetworkNoOfEntries;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ANSC_HANDLE
+        AvailableNetworks_GetEntry
+            (
+                ANSC_HANDLE                 hInsContext,
+                ULONG                       nIndex,
+                ULONG*                      pInsNumber
+            );
+
+    description:
+
+        This function is called to retrieve the entry specified by the index.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                ULONG                       nIndex,
+                The index of this entry;
+
+                ULONG*                      pInsNumber
+                The output instance number;
+
+    return:     The handle to identify the entry
+
+**********************************************************************/
+ANSC_HANDLE
+AvailableNetworks_GetEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ULONG                       nIndex,
+        ULONG*                      pInsNumber
+    )
+{    
+    PCELLULAR_INTERFACE_INFO    pstInterfaceInfo = (PCELLULAR_INTERFACE_INFO)hInsContext;
+    PCELLULAR_PLMNACCESS_INFO   pstPlmnInfo      = &(pstInterfaceInfo->stPlmnAccessInfo);
+
+    *pInsNumber = nIndex + 1;
+
+    return (&(pstPlmnInfo->pstAvailableNetworks[nIndex])); /* return the handle */
+}
+
+/**********************************************************************
+    caller:     owner of this object
+
+    prototype:
+        BOOL
+        AvailableNetworks_GetParamBoolValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                BOOL*                       pBool
+            );
+
+    description:
+        This function is called to retrieve Boolean parameter value;
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                BOOL*                       pBool
+                The buffer of returned boolean value;
+
+    return:     TRUE if succeeded.
+**********************************************************************/
+BOOL
+AvailableNetworks_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    )
+{
+    PCELLULAR_PLMN_AVAILABLENETWORK_INFO  pstAvailableNetworks =(PCELLULAR_PLMN_AVAILABLENETWORK_INFO)hInsContext;
+
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "Allowed", TRUE) )
+    {
+        *pBool = pstAvailableNetworks->Allowed;
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        AvailableNetworks_GetParamStringValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                char*                       pValue,
+                ULONG*                      pUlSize
+            );
+
+    description:
+
+        This function is called to retrieve string parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                char*                       pValue,
+                The string value buffer;
+
+                ULONG*                      pUlSize
+                The buffer of length of string value;
+                Usually size of 1023 will be used.
+                If it's not big enough, put required size here and return 1;
+
+    return:     0 if succeeded;
+                1 if short of buffer size; (*pUlSize = required size)
+                -1 if not supported.
+
+**********************************************************************/
+ULONG
+AvailableNetworks_GetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    )
+{
+    PCELLULAR_PLMN_AVAILABLENETWORK_INFO  pstAvailableNetworks =(PCELLULAR_PLMN_AVAILABLENETWORK_INFO)hInsContext;
+
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "Mcc", TRUE))
+    {
+        /* collect value */
+        AnscCopyString(pValue, pstAvailableNetworks->MCC);
+        return 0;
+    }
+
+    if( AnscEqualString(ParamName, "Mnc", TRUE))
+    {
+        /* collect value */
+        AnscCopyString(pValue, pstAvailableNetworks->MNC);
+        return 0;
+    }
+
+    if( AnscEqualString(ParamName, "Name", TRUE))
+    {
+        /* collect value */
+        AnscCopyString(pValue, pstAvailableNetworks->Name);
         return 0;
     }
 
@@ -3874,6 +4250,7 @@ ANSC_HANDLE Cellular_AccessPoint_AddEntry(ANSC_HANDLE hInsContext, ULONG* pInsNu
     //Assign new memory to actual structure
     pstDmlCellular->ulAccessPointNoOfEntries = ulTotalCount;
     pstProfileInfo[ulTotalCount - 1].bIsThisNewlyAddedRecord = TRUE;
+    pstProfileInfo[ulTotalCount - 1].X_RDK_Roaming = TRUE;
     pstDmlCellular->pstAPInfo = pstProfileInfo;
     *pInsNumber = pstDmlCellular->ulAccessPointNoOfEntries;
 
@@ -4135,9 +4512,15 @@ Cellular_AccessPoint_GetParamBoolValue
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "X_RDK_Default", TRUE) )
+    if( AnscEqualString(ParamName, "X_RDK_DefaultProfile", TRUE) )
     {
         *pBool = pstAPInfo->X_RDK_Default;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "X_RDK_Roaming", TRUE) )
+    {
+        *pBool = pstAPInfo->X_RDK_Roaming;
         return TRUE;
     }
 
@@ -4191,9 +4574,15 @@ Cellular_AccessPoint_SetParamBoolValue
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "X_RDK_Default", TRUE))
+    if( AnscEqualString(ParamName, "X_RDK_DefaultProfile", TRUE))
     {
         pstAPInfo->X_RDK_Default = bValue;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "X_RDK_Roaming", TRUE))
+    {
+        pstAPInfo->X_RDK_Roaming = bValue;
         return TRUE;
     }
 
@@ -4381,7 +4770,7 @@ Cellular_AccessPoint_GetParamUlongValue
     PCELLULAR_INTERFACE_ACCESSPOINT_INFO   pstAPInfo = (PCELLULAR_INTERFACE_ACCESSPOINT_INFO)hInsContext;
 
     /* check the parameter name and return the corresponding value */
-    if( AnscEqualString(ParamName, "ProfileIndex", TRUE))   
+    if( AnscEqualString(ParamName, "X_RDK_ProfileId", TRUE))   
     {
         *puLong = pstAPInfo->ProfileIndex;    
         return TRUE;

@@ -50,3 +50,19 @@ unsigned long cellular_hal_util_GetCurrentTimeInSeconds( void )
 
     return tv.tv_sec;
 }
+
+/* cellular_hal_util_GetUptime() */
+int cellular_hal_util_GetUptime(unsigned long *time)
+{
+   FILE * fp = fopen("/proc/uptime", "r");
+   if ( !fp )
+   {
+       return -1;
+   }
+
+   fscanf(fp,"%lu",time);
+   fclose(fp);
+   fp = NULL;
+   
+   return 0;
+}

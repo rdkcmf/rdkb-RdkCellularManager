@@ -41,8 +41,13 @@
 #define  CELLULAR_QMI_GETPKTSTATS_VIA_DML_MAX_WAITIME           ( 10 )
 #define  CELLULAR_QMI_GETPKTSTATS_VIA_DML_TTL_FOR_STATS_INFO    ( 30 )
 #define  CELLULAR_QMI_GETREG_STATUS_VIA_DML_MAX_WAITIME         ( 10 )
+#define  CELLULAR_QMI_GETNETWORK_VIA_DML_MAX_WAITIME            ( 10 )
+#define  CELLULAR_QMI_GETNETWORK_VIA_DML_MAX_TTL                ( 60 )
 
 #define  CELLULAR_QMI_ICCID_MAX_LENGTH                          ( 21 )
+#define  CELLULAR_QMI_NETWORKSCAN_MAX_LENGTH                    ( 128 )
+
+#define  CELLULAR_QMI_NETWORKSCAN_COLLECTION_PERIODIC_INTERVAL  ( 60 )
 
 /**********************************************************************
     GLOBAL or LOCAL DEFINITIONS and STRUCTURE or ENUM DECLARATION
@@ -61,6 +66,7 @@ typedef enum {
     MODEM_OPEN_STATE_GET_CAPABILITIES,
     MODEM_OPEN_STATE_NAS_OPEN,
     MODEM_OPEN_STATE_NAS_REGISTER_SIGNAL_INDICATIONS,
+    MODEM_OPEN_STATE_NAS_NETWORK_SCAN_INIT,
     MODEM_OPEN_STATE_NOTIFY,
     MODEM_OPEN_STATE_END
 } ModemOpenState_t;
@@ -102,6 +108,32 @@ typedef struct
     void*                               vpPrivateData;
     guint8                              bIsModemRegTaskDMLGetCompleted;
 } ContextModemRegistration;
+
+typedef enum {
+    NAS_NETWORK_SCAN_MONITOR_BEGIN                  = 1,
+    NAS_NETWORK_SCAN_WAITING_TO_START_COLLECTION,
+    NAS_NETWORK_SCAN_START_COLLECTION,
+    NAS_NETWORK_SCAN_MONITOR_END
+} NASNetworkScanState_t;
+
+typedef struct 
+{
+    guint                               uiCurrentStep; 
+    void*                               vpPrivateData;
+} ContextNetworkScan;
+
+typedef enum {
+    NAS_GET_NETWORK_INFO_BEGIN                  = 1,
+    NAS_GET_NETWORK_INFO_COLLECT_SERVING_SYSTEM,
+    NAS_GET_NETWORK_INFO_COLLECT_SYSTEM_INFO,
+    NAS_GET_NETWORK_INFO_END
+} NASGetNetworkInfoState_t;
+
+typedef struct 
+{
+    guint                               uiCurrentStep; 
+    void*                               vpPrivateData;
+} ContextGetNetworkInfo;
 
 typedef enum {
     WDS_PROFILE_CREATE_BEGIN                  = 1,
@@ -204,6 +236,15 @@ typedef struct
 
 typedef struct 
 {
+    guint16                         mcc;
+    guint16                         mnc;
+    gchar                           name[32];
+    gint8                           roaming_allowed_flag;
+
+} NASAvailableNetworkInfo;
+
+typedef struct 
+{
     guint8                          bIsValidNASClient;                   //Ensure NAS client is valid or not valid
     QmiClient                       *nasClient;                          //NAS client 
     gint8                           lte_rssi;
@@ -211,9 +252,18 @@ typedef struct
     gint16                          lte_rsrp;
     gint16                          lte_snr;
     guint8                          bIsSignalInfoCollectionDone;
+    CellularDeviceNASStatus_t       enNASRegistrationStatus;
     guint8                          bIsModemRegTaskStillRunning;
     GCancellable                    *cancellableForModemRegTask;
     guint8                          serving_system_id;
+    guint8                          bIsModemRegDone;
+    guint8                          bIsNetworkScanTaskStillRunning;
+    GCancellable                    *cancellableForNetworkScanTask;
+    guint8                          bIsGetNetworkInfoCollectionDone;
+    gint16                          iTotalNoofNetworkInfo;
+    NASAvailableNetworkInfo         astNetworkInfo[CELLULAR_QMI_NETWORKSCAN_MAX_LENGTH];
+    unsigned long                   LastCollectedTimeForPlmnInfo;
+    CellularCurrentPlmnInfoStruct   stPlmnInfo;
 
 } ContextNASInfo;
 
@@ -284,6 +334,9 @@ typedef  struct
     gchar                           wwan_iface[16];
     gchar                           modem_device_name[16];
     gchar                           modem_device_path[32];
+    gchar                           net_driver[16];
+    gchar                           net_sysfs_path[32];
+    guint8                          IsDeviceRemovedSignalReceived;
     ContextDMSInfo                  dmsCtx;                            //DMS context
     ContextNASInfo                  nasCtx;                            //NAS context
     ContextUIMInfo                  uimCtx;                            //UIM context
@@ -351,6 +404,9 @@ static void cellular_hal_qmi_monitor_device_registration_step( GTask *task );
 static void cellular_hal_qmi_monitor_device_registration_context_free( ContextModemRegistration *pDeviceRegCtx );
 static void cellular_hal_qmi_get_next_profile_settings (ContextProfileList *inner_ctx);
 static void cellular_hal_qmi_get_network_packet_stats_step( GTask *task );
+static void cellular_hal_qmi_get_current_plmn_information_step( GTask *task );
+static int cellular_hal_qmi_network_scan_data_collection_task( void );
+static void cellular_hal_qmi_network_scan_data_collection_step( GTask *task );
 
 static void cellular_hal_qmi_get_profile_list_cb (QmiClientWds *wdsClient,
                                                      GAsyncResult *result,
@@ -405,6 +461,8 @@ cellular_hal_qmi_init
         snprintf(gpstQMIContext->modem_device_name, sizeof(gpstQMIContext->modem_device_name), "%s", QMI_DEVICE_NAME);
         snprintf(gpstQMIContext->modem_device_path, sizeof(gpstQMIContext->modem_device_path), "%s", QMI_DEVICE_PATH);
 
+        gpstQMIContext->IsDeviceRemovedSignalReceived = FALSE;
+
         //UIM
         gpstQMIContext->uimCtx.total_no_of_slots                 = 0;
         gpstQMIContext->uimCtx.selected_slot_number              = CELLULAR_SLOT_ID_UNKNOWN;
@@ -412,6 +470,9 @@ cellular_hal_qmi_init
 
         //NAS
         gpstQMIContext->nasCtx.bIsModemRegTaskStillRunning       = FALSE;
+        gpstQMIContext->nasCtx.LastCollectedTimeForPlmnInfo      = 0;
+        gpstQMIContext->nasCtx.bIsNetworkScanTaskStillRunning    = FALSE;
+        gpstQMIContext->nasCtx.enNASRegistrationStatus           = DEVICE_NAS_STATUS_NOT_REGISTERED;
 
         //WDS
         gpstQMIContext->wdsCtx.ui8ProfileCount                   = 0;
@@ -469,6 +530,8 @@ static void cellular_hal_qmi_reinitialize_context ( void )
 
         snprintf(gpstQMIContext->modem_device_name, sizeof(gpstQMIContext->modem_device_name), "%s", QMI_DEVICE_NAME);
         snprintf(gpstQMIContext->modem_device_path, sizeof(gpstQMIContext->modem_device_path), "%s", QMI_DEVICE_PATH);
+        
+	gpstQMIContext->IsDeviceRemovedSignalReceived = FALSE;
 
         //UIM
         gpstQMIContext->uimCtx.total_no_of_slots                 = 0;
@@ -477,6 +540,9 @@ static void cellular_hal_qmi_reinitialize_context ( void )
 
         //NAS
         gpstQMIContext->nasCtx.bIsModemRegTaskStillRunning       = FALSE;
+        gpstQMIContext->nasCtx.LastCollectedTimeForPlmnInfo      = 0;
+        gpstQMIContext->nasCtx.bIsNetworkScanTaskStillRunning    = FALSE;
+        gpstQMIContext->nasCtx.enNASRegistrationStatus           = DEVICE_NAS_STATUS_NOT_REGISTERED;
 
         //WDS
         gpstQMIContext->wdsCtx.ui8ProfileCount                   = 0;
@@ -554,6 +620,8 @@ static void cellular_hal_qmi_device_removed_cb (QmiDevice *device, gpointer  use
     /* QMI device went offline */
     CELLULAR_HAL_DBG_PRINT("%s - Connection to qmi-proxy for %s lost\n", __FUNCTION__, qmi_device_get_path_display (gpstQMIContext->qmiDevice));
     
+    gpstQMIContext->IsDeviceRemovedSignalReceived = TRUE;
+
     g_signal_handler_disconnect (gpstQMIContext->qmiDevice, gpstQMIContext->qmi_device_removed_id);
     gpstQMIContext->qmi_device_removed_id = CELLULAR_QMI_INVALID_EVENT_INDICATION;
 
@@ -564,6 +632,18 @@ static void cellular_hal_qmi_device_removed_cb (QmiDevice *device, gpointer  use
     //Release NAS, WDS, UIM, DMS clients
     if( NULL != nasCtx->nasClient )
     {
+        //If the task still running then needs to stop
+        if ( TRUE == nasCtx->bIsNetworkScanTaskStillRunning )
+        {
+            g_cancellable_cancel (nasCtx->cancellableForNetworkScanTask);
+            sleep(2);
+            g_object_unref (nasCtx->cancellableForNetworkScanTask);
+            nasCtx->cancellableForNetworkScanTask = NULL;
+
+            nasCtx->iTotalNoofNetworkInfo = 0;
+            memset( nasCtx->astNetworkInfo, 0, sizeof( nasCtx->astNetworkInfo ) );
+        }
+
         //If the task still running then needs to stop
         if ( TRUE == nasCtx->bIsModemRegTaskStillRunning )
         {
@@ -1292,6 +1372,13 @@ static void cellular_hal_qmi_device_open_step( GTask *task )
         }
         case MODEM_OPEN_STATE_NAS_REGISTER_SIGNAL_INDICATIONS:
         {
+            pDeviceOpenCtx->uiCurrentStep++;
+            /* fall through */
+        }
+        case MODEM_OPEN_STATE_NAS_NETWORK_SCAN_INIT:
+        {
+            //FIX ME: Avoiding network scan start here to avoid internal QMI crash during scan. 
+            //cellular_hal_qmi_network_scan_data_collection_task();
             pDeviceOpenCtx->uiCurrentStep++;
             /* fall through */
         }
@@ -2744,9 +2831,11 @@ static void cellular_hal_qmi_monitor_get_serving_system (QmiClientNas *nasClient
     GTask *task = (GTask*)user_data;
     QMIContextStructPrivate   *pstQMIContext  = NULL;
     ContextModemRegistration  *pDeviceRegCtx = NULL;
+    ContextNASInfo   *nasCtx = NULL;
 
     pDeviceRegCtx  = g_task_get_task_data (task);
     pstQMIContext   = (QMIContextStructPrivate*)pDeviceRegCtx->vpPrivateData;
+    nasCtx = &(pstQMIContext->nasCtx);
 
     output = qmi_client_nas_get_serving_system_finish (nasClient, result, &error);
     if (!output) {
@@ -2821,6 +2910,8 @@ static void cellular_hal_qmi_monitor_get_serving_system (QmiClientNas *nasClient
             }
         }
 
+        nasCtx->enNASRegistrationStatus = DEVICE_NAS_STATUS_NOT_REGISTERED;
+
         //All good so notify otherwise retry after 5seconds and cs_attach_state is only for 2G. When LTE PS should be attached
         if( ( registration_state == QMI_NAS_REGISTRATION_STATE_REGISTERED  ) &&
             ( ( ( TRUE == bIsLTENetworkDetected ) && ( ps_attach_state == QMI_NAS_ATTACH_STATE_ATTACHED ) ) ||
@@ -2867,6 +2958,8 @@ static void cellular_hal_qmi_monitor_get_serving_system (QmiClientNas *nasClient
                     goto LASTSTEP;
                 }
 
+                qmi_message_nas_get_serving_system_output_unref (output);
+
                 sleep(5); //Retry after 5seconds
 
                 pDeviceRegCtx->uiCurrentStep = NAS_MODEM_GET_REGISTRATION_STATUS;
@@ -2877,6 +2970,7 @@ static void cellular_hal_qmi_monitor_get_serving_system (QmiClientNas *nasClient
     }
 
 LASTSTEP:
+    qmi_message_nas_get_serving_system_output_unref (output);
     pDeviceRegCtx->uiCurrentStep = NAS_MODEM_NOTIFY_REGISTRATION_STATUS;
     cellular_hal_qmi_monitor_device_registration_step(task);
 }
@@ -3002,6 +3096,553 @@ int cellular_hal_qmi_monitor_device_registration(cellular_device_registration_st
     else
     {
         CELLULAR_HAL_DBG_PRINT("%s - QMI(%s) not ready so slot can't be monitor registration status\n", __FUNCTION__, gpstQMIContext->modem_device_name);
+        return RETURN_ERROR;
+    }
+}
+
+static void cellular_hal_qmi_network_scan_ready (QmiClientNas *client,
+                                                 GAsyncResult *res,
+                                                 gpointer  user_data)
+{
+    QmiMessageNasNetworkScanOutput *output;
+    QmiNasNetworkScanResult network_scan_result = QMI_NAS_NETWORK_SCAN_RESULT_ABORT;
+    GError *error = NULL;
+    GArray *array;
+    GTask *task = (GTask*)user_data;
+    QMIContextStructPrivate   *pstQMIContext  = NULL;
+    ContextNetworkScan        *pNetworkScanCtx = NULL;
+    guint TotalEntries = 0;
+    ContextNASInfo   *nasCtx = NULL;
+
+    pNetworkScanCtx = g_task_get_task_data (task);
+    pstQMIContext   = (QMIContextStructPrivate*)pNetworkScanCtx->vpPrivateData;
+    nasCtx          = &(pstQMIContext->nasCtx);
+
+    nasCtx->iTotalNoofNetworkInfo = 0;
+    memset( &nasCtx->astNetworkInfo, 0, sizeof( &nasCtx->astNetworkInfo ));
+
+    output = qmi_client_nas_network_scan_finish (client, res, &error);
+    if (!output) {
+        CELLULAR_HAL_DBG_PRINT("%s error: operation failed: %s\n",__FUNCTION__,error->message);
+        g_error_free (error);
+        goto NEXTSTEP;
+    }
+
+    if (!qmi_message_nas_network_scan_output_get_result (output, &error)) {
+        CELLULAR_HAL_DBG_PRINT("%s error: couldn't scan networks: %s\n",__FUNCTION__,error->message);
+        g_error_free (error);
+        qmi_message_nas_network_scan_output_unref (output);
+        goto NEXTSTEP;
+    }
+
+    array = NULL;
+    if (qmi_message_nas_network_scan_output_get_network_information (output, &array, NULL)) 
+    {
+        guint i;
+
+        for (i = 0; i < array->len; i++) {
+            QmiMessageNasNetworkScanOutputNetworkInformationElement *element;
+            g_autofree gchar *status_str = NULL;
+
+            element = &g_array_index (array, QmiMessageNasNetworkScanOutputNetworkInformationElement, i);
+            status_str = qmi_nas_network_status_build_string_from_mask (element->network_status);
+
+            nasCtx->astNetworkInfo[TotalEntries].mcc = element->mcc;
+            nasCtx->astNetworkInfo[TotalEntries].mnc = element->mnc;
+            snprintf(nasCtx->astNetworkInfo[TotalEntries].name, sizeof(nasCtx->astNetworkInfo[TotalEntries].name), "%s", element->description);
+            
+            nasCtx->astNetworkInfo[TotalEntries].roaming_allowed_flag = FALSE; 
+            if( ( NULL != status_str ) &&
+                ( NULL != strstr(status_str, "roaming" )) )
+            {
+                nasCtx->astNetworkInfo[TotalEntries].roaming_allowed_flag = TRUE; 
+            }
+
+            ++TotalEntries;
+        }
+
+        nasCtx->iTotalNoofNetworkInfo = TotalEntries;
+    }
+
+    if (qmi_message_nas_network_scan_output_get_network_scan_result (output,
+                                                                     &network_scan_result,
+                                                                     NULL)) {
+        //NOP
+    }
+
+    qmi_message_nas_network_scan_output_unref (output);
+
+NEXTSTEP:
+    pNetworkScanCtx->uiCurrentStep = NAS_NETWORK_SCAN_WAITING_TO_START_COLLECTION;
+    cellular_hal_qmi_network_scan_data_collection_step(task);
+}
+
+static void cellular_hal_qmi_network_scan_data_collection_step( GTask *task )
+{
+    QMIContextStructPrivate   *pstQMIContext   = NULL;
+    ContextNetworkScan        *pNetworkScanCtx = NULL;
+
+    pNetworkScanCtx  = g_task_get_task_data (task);
+    pstQMIContext    = (QMIContextStructPrivate*)pNetworkScanCtx->vpPrivateData;
+    
+    switch ( pNetworkScanCtx->uiCurrentStep ) 
+    {
+        case NAS_NETWORK_SCAN_MONITOR_BEGIN:
+        {
+            pNetworkScanCtx->uiCurrentStep++;
+            /* fall through */
+        }
+        case NAS_NETWORK_SCAN_WAITING_TO_START_COLLECTION:
+        {
+            ContextNASInfo   *nasCtx = &(pstQMIContext->nasCtx);
+
+            while( 1 )
+            {
+                //Sleep for certain time for collection
+                sleep(CELLULAR_QMI_NETWORKSCAN_COLLECTION_PERIODIC_INTERVAL);
+
+                if( ( TRUE == pstQMIContext->IsDeviceRemovedSignalReceived ) ||
+                    ( nasCtx->enNASRegistrationStatus == DEVICE_NAS_STATUS_REGISTERED ) )
+                {
+                    //Collection for network scan or cancel when device removed case
+                    break;
+                }
+            }
+        }
+        case NAS_NETWORK_SCAN_START_COLLECTION:
+        {
+            if( FALSE == pstQMIContext->IsDeviceRemovedSignalReceived )
+            {
+                ContextNASInfo   *nasCtx = &(pstQMIContext->nasCtx);
+
+                qmi_client_nas_network_scan (QMI_CLIENT_NAS(nasCtx->nasClient),
+                                            NULL,
+                                            300, /* this operation takes a lot of time! */
+                                            NULL,
+                                            (GAsyncReadyCallback)cellular_hal_qmi_network_scan_ready,
+                                            task);
+                return;
+            }
+        }
+        case NAS_NETWORK_SCAN_MONITOR_END:
+        default:
+        {
+            //Assign NULL task pointer after free
+            if( NULL != pstQMIContext )
+            {
+                ContextNASInfo   *nasCtx = &(pstQMIContext->nasCtx);
+
+                nasCtx->bIsNetworkScanTaskStillRunning = FALSE;
+
+                if( NULL != nasCtx->cancellableForNetworkScanTask )
+                {
+                    g_object_unref (nasCtx->cancellableForNetworkScanTask);
+                    nasCtx->cancellableForNetworkScanTask = NULL;
+                }
+            }
+
+            g_object_unref (task);
+        }
+    }
+}
+
+static void cellular_hal_qmi_network_scan_data_collection_thread(GTask *task,
+                                                                 gpointer source_object,
+                                                                 gpointer task_data,
+                                                                 GCancellable *cancellable)
+{
+    CELLULAR_HAL_DBG_PRINT("%s - Network Scan Data Collection Thread:0x%p\n",__FUNCTION__,task);
+    cellular_hal_qmi_network_scan_data_collection_step(task);
+}
+
+static void cellular_hal_qmi_network_scan_data_collection_task_context_free( ContextNetworkScan *pNetworkScanCtx )
+{
+    CELLULAR_HAL_DBG_PRINT("%s Freeing allocated resources\n",__FUNCTION__);
+
+    if( NULL != pNetworkScanCtx )
+    {
+        g_slice_free(ContextNetworkScan, pNetworkScanCtx);
+        pNetworkScanCtx  = NULL;
+    }
+}
+
+static int cellular_hal_qmi_network_scan_data_collection_task( void )
+{
+    //Check whether QMI ready or not
+    if( ( NULL != gpstQMIContext ) && \
+        ( NULL != gpstQMIContext->qmiDevice ) && \
+        ( TRUE == qmi_device_is_open( gpstQMIContext->qmiDevice ) ) )
+    {
+        ContextNASInfo   *nasCtx = &(gpstQMIContext->nasCtx);
+
+        if( NULL != nasCtx->nasClient )
+        {
+            if( FALSE == nasCtx->bIsNetworkScanTaskStillRunning )
+            {
+                ContextNetworkScan  *pNetworkScanCtx = NULL;
+                GTask               *task;
+
+                pNetworkScanCtx                  = (ContextNetworkScan*)g_slice_new0 (ContextNetworkScan);
+                pNetworkScanCtx->uiCurrentStep   = NAS_NETWORK_SCAN_MONITOR_BEGIN;
+                pNetworkScanCtx->vpPrivateData   = (void*) gpstQMIContext;
+                
+                nasCtx->bIsNetworkScanTaskStillRunning = TRUE;
+                nasCtx->cancellableForNetworkScanTask = g_cancellable_new ();
+
+                task = g_task_new (NULL, nasCtx->cancellableForNetworkScanTask, NULL, NULL);
+                g_task_set_task_data (task, (gpointer)pNetworkScanCtx, (GDestroyNotify)cellular_hal_qmi_network_scan_data_collection_task_context_free);
+
+                CELLULAR_HAL_DBG_PRINT("%s - Network Scan Data Collection Task:0x%p\n",__FUNCTION__,task);
+                g_task_run_in_thread(task,cellular_hal_qmi_network_scan_data_collection_thread);
+                
+                return RETURN_OK;
+            }
+            else
+            {
+                CELLULAR_HAL_DBG_PRINT("%s - Network Scan is already running so ignore another instance\n", __FUNCTION__);
+                return RETURN_ERROR; 
+            }
+        }
+        else
+        {
+            CELLULAR_HAL_DBG_PRINT("%s - NAS client is not ready so can't be collect network scan information\n", __FUNCTION__);
+            return RETURN_ERROR;
+        }
+    }
+    else
+    {
+        CELLULAR_HAL_DBG_PRINT("%s - QMI(%s) not ready so can't be collect network scan information\n", __FUNCTION__, gpstQMIContext->net_driver);
+        return RETURN_ERROR;
+    }
+}
+
+int cellular_hal_qmi_get_available_networks_information(CellularNetworkScanResultInfoStruct **network_info, unsigned int *total_network_count)
+{
+    *total_network_count = 0;
+
+    //Check whether QMI ready or not
+    if( ( NULL != gpstQMIContext ) && \
+        ( NULL != gpstQMIContext->qmiDevice ) && \
+        ( TRUE == qmi_device_is_open( gpstQMIContext->qmiDevice ) ) )
+    {
+        ContextNASInfo   *nasCtx = &(gpstQMIContext->nasCtx);
+
+        if( NULL != nasCtx->nasClient )
+        {
+            *total_network_count = nasCtx->iTotalNoofNetworkInfo;
+            *network_info = NULL;
+
+            if( 0 < nasCtx->iTotalNoofNetworkInfo )
+            {
+                *network_info = malloc( sizeof( NASAvailableNetworkInfo ) * nasCtx->iTotalNoofNetworkInfo );
+                memset( *network_info, 0, sizeof( NASAvailableNetworkInfo ) * nasCtx->iTotalNoofNetworkInfo );
+                memcpy( *network_info, &(nasCtx->astNetworkInfo), sizeof( NASAvailableNetworkInfo ) * nasCtx->iTotalNoofNetworkInfo );
+                return RETURN_OK;
+           }
+        }
+    }
+    else
+    {
+        CELLULAR_HAL_DBG_PRINT("%s - QMI(%s) not ready so can't be collect network scan information\n", __FUNCTION__, gpstQMIContext->net_driver);
+        return RETURN_ERROR;
+    }
+}
+
+static void cellular_hal_qmi_get_current_plmn_network_info_ready (QmiClientNas *client, GAsyncResult *res, gpointer  user_data)
+{
+    QmiMessageNasGetServingSystemOutput *output;
+    GError *error = NULL;
+    GTask *task = (GTask*)user_data;
+    QMIContextStructPrivate   *pstQMIContext  = NULL;
+    ContextGetNetworkInfo     *pNetworkGetCtx = NULL;
+    CellularCurrentPlmnInfoStruct *pstPlmnInfo = NULL;
+    ContextNASInfo   *nasCtx = NULL;
+
+    pNetworkGetCtx  = g_task_get_task_data (task);
+    pstQMIContext   = (QMIContextStructPrivate*)pNetworkGetCtx->vpPrivateData;
+    nasCtx          = &(pstQMIContext->nasCtx);
+    pstPlmnInfo     = &(nasCtx->stPlmnInfo);
+
+    output = qmi_client_nas_get_serving_system_finish (client, res, &error);
+    if (!output) {
+        CELLULAR_HAL_DBG_PRINT("%s error: operation failed: %s\n",__FUNCTION__,error->message);
+        g_error_free (error);
+        goto NEXTSTEP;
+    }
+
+    if (!qmi_message_nas_get_serving_system_output_get_result (output, &error)) {
+        CELLULAR_HAL_DBG_PRINT("%s error: couldn't get serving system: %s\n",__FUNCTION__,error->message);
+        g_error_free (error);
+        qmi_message_nas_get_serving_system_output_unref (output);
+        goto NEXTSTEP;
+    }
+
+    {
+        QmiNasRegistrationState registration_state;
+        QmiNasAttachState cs_attach_state;
+        QmiNasAttachState ps_attach_state;
+        QmiNasNetworkType selected_network;
+        GArray *radio_interfaces;
+        guint i;
+        guint8 bIsLTENetworkDetected = FALSE;
+
+        qmi_message_nas_get_serving_system_output_get_serving_system ( output,
+                                                                       &registration_state,
+                                                                       &cs_attach_state,
+                                                                       &ps_attach_state,
+                                                                       &selected_network,
+                                                                       &radio_interfaces,
+                                                                       NULL);
+
+        for (i = 0; i < radio_interfaces->len; i++) 
+        {
+            QmiNasRadioInterface iface;
+
+            iface = g_array_index (radio_interfaces, QmiNasRadioInterface, i);
+
+            if( 0 == strcmp( "lte", qmi_nas_radio_interface_get_string (iface) ) )
+            {
+                bIsLTENetworkDetected = TRUE;
+            }
+        }
+
+        if( registration_state == QMI_NAS_REGISTRATION_STATE_REGISTERED )
+        {
+            pstPlmnInfo->registration_status = DEVICE_REGISTERED;
+        }
+        else
+        {
+            pstPlmnInfo->registration_status = DEVICE_NOT_REGISTERED;
+        }
+
+        pstPlmnInfo->registered_service = CELLULAR_MODEM_REGISTERED_SERVICE_NONE;
+
+        //All good so notify otherwise retry after 5seconds and cs_attach_state is only for 2G. When LTE PS should be attached
+        if( ( registration_state == QMI_NAS_REGISTRATION_STATE_REGISTERED  ) &&
+            ( ( ( TRUE == bIsLTENetworkDetected ) && ( ps_attach_state == QMI_NAS_ATTACH_STATE_ATTACHED ) ) ||
+              ( FALSE == bIsLTENetworkDetected ) ) )
+        {
+            if( FALSE == bIsLTENetworkDetected )
+            {
+                pstPlmnInfo->registered_service = CELLULAR_MODEM_REGISTERED_SERVICE_NONE;
+            }
+            else
+            {
+                if( ( ps_attach_state == QMI_NAS_ATTACH_STATE_ATTACHED ) && 
+                    ( cs_attach_state == QMI_NAS_ATTACH_STATE_ATTACHED ) )
+                {
+                    pstPlmnInfo->registered_service = CELLULAR_MODEM_REGISTERED_SERVICE_CS_PS;
+                }
+                else if( ps_attach_state == QMI_NAS_ATTACH_STATE_ATTACHED )
+                {
+                    pstPlmnInfo->registered_service = CELLULAR_MODEM_REGISTERED_SERVICE_PS;
+                }
+                else if( cs_attach_state == QMI_NAS_ATTACH_STATE_ATTACHED )
+                {
+                    pstPlmnInfo->registered_service = CELLULAR_MODEM_REGISTERED_SERVICE_CS;
+                }
+                else
+                {
+                    pstPlmnInfo->registered_service = CELLULAR_MODEM_REGISTERED_SERVICE_NONE;
+                }
+            }
+        }
+    }
+
+    {
+        QmiNasRoamingIndicatorStatus roaming;
+
+        pstPlmnInfo->roaming_enabled = FALSE;
+
+        if (qmi_message_nas_get_serving_system_output_get_roaming_indicator (
+                output,
+                &roaming,
+                NULL)) 
+        {
+
+            if( roaming == QMI_NAS_ROAMING_INDICATOR_STATUS_ON )
+            {
+                pstPlmnInfo->roaming_enabled = TRUE;
+            }
+        }
+    }
+
+    {   
+        guint16 current_plmn_mcc;
+        guint16 current_plmn_mnc;
+        const gchar *current_plmn_description;
+        
+        if (qmi_message_nas_get_serving_system_output_get_current_plmn (
+                output,
+                &current_plmn_mcc,
+                &current_plmn_mnc,
+                &current_plmn_description,
+                NULL)) 
+        {
+            pstPlmnInfo->MCC = current_plmn_mcc;
+            pstPlmnInfo->MNC = current_plmn_mnc;
+            snprintf(pstPlmnInfo->plmn_name, sizeof(pstPlmnInfo->plmn_name), current_plmn_description);
+        }
+    }
+
+    {   
+        guint16 lac;
+        
+        if (qmi_message_nas_get_serving_system_output_get_lac_3gpp (
+                output,
+                &lac,
+                NULL)) 
+        {
+            pstPlmnInfo->area_code = lac;
+        }
+    }
+
+    {
+        guint32 cid;
+
+        if (qmi_message_nas_get_serving_system_output_get_cid_3gpp (
+                output,
+                &cid,
+                NULL)) 
+        {
+            pstPlmnInfo->cell_id = cid;
+        }
+    }
+
+NEXTSTEP:
+    qmi_message_nas_get_serving_system_output_unref (output);
+
+    pNetworkGetCtx->uiCurrentStep++;
+    cellular_hal_qmi_get_current_plmn_information_step(task);
+}
+
+static void cellular_hal_qmi_get_current_plmn_information_step( GTask *task )
+{
+    QMIContextStructPrivate   *pstQMIContext  = NULL;
+    ContextGetNetworkInfo     *pNetworkGetCtx = NULL;
+
+    pNetworkGetCtx  = g_task_get_task_data (task);
+    pstQMIContext   = (QMIContextStructPrivate*)pNetworkGetCtx->vpPrivateData;
+    
+    switch ( pNetworkGetCtx->uiCurrentStep ) 
+    {
+        case NAS_GET_NETWORK_INFO_BEGIN:
+        {
+            pNetworkGetCtx->uiCurrentStep++;
+            /* fall through */
+        }
+        case NAS_GET_NETWORK_INFO_COLLECT_SERVING_SYSTEM:
+        {
+            ContextNASInfo   *nasCtx = &(pstQMIContext->nasCtx);
+
+            qmi_client_nas_get_serving_system ( QMI_CLIENT_NAS(nasCtx->nasClient),
+                                                NULL,
+                                                10,
+                                                NULL,
+                                                (GAsyncReadyCallback)cellular_hal_qmi_get_current_plmn_network_info_ready,
+                                                task);
+            return;
+        }
+        case NAS_GET_NETWORK_INFO_COLLECT_SYSTEM_INFO:
+        {
+        }
+        case NAS_GET_NETWORK_INFO_END:
+        default:
+        {
+            ContextNASInfo   *nasCtx = &(pstQMIContext->nasCtx);
+            unsigned long lCurrentUptime = 0;
+
+            nasCtx->bIsGetNetworkInfoCollectionDone = TRUE;
+            cellular_hal_util_GetUptime( &lCurrentUptime );
+            nasCtx->LastCollectedTimeForPlmnInfo = lCurrentUptime;
+
+            g_object_unref (task);
+        }
+    }
+}
+
+static void cellular_hal_qmi_get_current_plmn_information_context_free( ContextGetNetworkInfo *pNetworkGetCtx )
+{
+    CELLULAR_HAL_DBG_PRINT("%s Freeing allocated resources\n",__FUNCTION__);
+
+    if( NULL != pNetworkGetCtx )
+    {
+        g_slice_free(ContextGetNetworkInfo, pNetworkGetCtx);
+        pNetworkGetCtx  = NULL;
+    }
+}
+
+int cellular_hal_qmi_get_current_plmn_information(CellularCurrentPlmnInfoStruct *plmn_info)
+{
+    //Check whether QMI ready or not
+    if( ( NULL != gpstQMIContext ) && \
+        ( NULL != gpstQMIContext->qmiDevice ) && \
+        ( TRUE == qmi_device_is_open( gpstQMIContext->qmiDevice ) ) )
+    {
+        ContextNASInfo   *nasCtx = &(gpstQMIContext->nasCtx);
+
+        if( NULL != nasCtx->nasClient )
+        {
+            unsigned long lCurrentUptime = 0;
+
+            cellular_hal_util_GetUptime( &lCurrentUptime );
+
+            if ( ( nasCtx->LastCollectedTimeForPlmnInfo > 0 ) &&
+                 ( lCurrentUptime - nasCtx->LastCollectedTimeForPlmnInfo ) <= CELLULAR_QMI_GETNETWORK_VIA_DML_MAX_TTL )
+            {
+                memcpy( plmn_info, &(nasCtx->stPlmnInfo), sizeof(CellularCurrentPlmnInfoStruct) );
+                CELLULAR_HAL_DBG_PRINT("%s - (C) Current PLMN information retrived\n", __FUNCTION__);
+
+                return RETURN_OK;
+            }
+            else
+            {
+                ContextGetNetworkInfo  *pNetworkGetCtx = NULL;
+                GTask                  *task;
+                int iLapsedSeconds = 0;
+
+                pNetworkGetCtx                  = (ContextGetNetworkInfo*)g_slice_new0 (ContextGetNetworkInfo);
+                pNetworkGetCtx->uiCurrentStep   = NAS_GET_NETWORK_INFO_BEGIN;
+                pNetworkGetCtx->vpPrivateData   = (void*) gpstQMIContext;
+                nasCtx->bIsGetNetworkInfoCollectionDone = FALSE;
+                
+                task = g_task_new (NULL, NULL, NULL, NULL);
+                g_task_set_task_data (task, (gpointer)pNetworkGetCtx, (GDestroyNotify)cellular_hal_qmi_get_current_plmn_information_context_free);
+
+                CELLULAR_HAL_DBG_PRINT("%s - Get current plmn information Task:0x%p\n",__FUNCTION__,task);
+                cellular_hal_qmi_get_current_plmn_information_step(task);
+
+                //Wait here query
+                while ( 1 )
+                {
+                    if( TRUE == nasCtx->bIsGetNetworkInfoCollectionDone )
+                    {
+                        memcpy( plmn_info, &(nasCtx->stPlmnInfo), sizeof(CellularCurrentPlmnInfoStruct) );
+                        CELLULAR_HAL_DBG_PRINT("%s - (A) Current PLMN information retrived\n", __FUNCTION__);
+                        break;
+                    }
+                    else if( iLapsedSeconds >= CELLULAR_QMI_GETNETWORK_VIA_DML_MAX_WAITIME )  
+                    {
+                        CELLULAR_HAL_DBG_PRINT("%s - Timeout during NAS network Query\n",__FUNCTION__);
+                        break;
+                    }
+
+                    sleep(1);
+                    iLapsedSeconds++;
+                }
+            }
+
+            return RETURN_OK;
+        }
+        else
+        {
+            CELLULAR_HAL_DBG_PRINT("%s - NAS client is not ready so an't be query network information\n", __FUNCTION__);
+            return RETURN_ERROR;
+        }
+    }
+    else
+    {
+        CELLULAR_HAL_DBG_PRINT("%s - QMI(%s) not ready so slot can't be query current plmn information\n", __FUNCTION__, gpstQMIContext->net_driver);
         return RETURN_ERROR;
     }
 }

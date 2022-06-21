@@ -136,12 +136,18 @@ int ANSC_EXPORT_API CellularMgr_DMLInit
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Identification_GetParamStringValue",  Identification_GetParamStringValue);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Firmware_GetParamStringValue",  Firmware_GetParamStringValue);
 
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "PlmnAccess_GetParamBoolValue",  PlmnAccess_GetParamBoolValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "PlmnAccess_GetParamUlongValue",  PlmnAccess_GetParamUlongValue);
+
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "HomeNetwork_GetParamStringValue",  HomeNetwork_GetParamStringValue);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "NetworkInUse_GetParamStringValue",  NetworkInUse_GetParamStringValue);
 
-    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "ServingCell_GetParamUlongValue",  ServingCell_GetParamUlongValue);
-    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "ServingCell_GetParamIntValue",  ServingCell_GetParamIntValue);
-    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "ServingCell_GetParamStringValue",  ServingCell_GetParamStringValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "AvailableNetworks_GetEntryCount",  AvailableNetworks_GetEntryCount);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "AvailableNetworks_GetEntry",  AvailableNetworks_GetEntry);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "AvailableNetworks_IsUpdated",  AvailableNetworks_IsUpdated);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "AvailableNetworks_Synchronize",  AvailableNetworks_Synchronize);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "AvailableNetworks_GetParamBoolValue",  AvailableNetworks_GetParamBoolValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "AvailableNetworks_GetParamStringValue",  AvailableNetworks_GetParamStringValue);
 
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "NeighborCell_GetEntryCount",  NeighborCell_GetEntryCount);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "NeighborCell_GetEntry",  NeighborCell_GetEntry);

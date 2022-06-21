@@ -150,8 +150,6 @@ Firmware_GetParamStringValue
     *  Cellular_Interface_Validate
     *  Cellular_Interface_Commit
     *  Cellular_Interface_Rollback
-    *  HomeNetwork_GetParamStringValue
-    *  NetworkInUse_GetParamStringValue
 
 ***********************************************************************/
 ULONG
@@ -237,6 +235,53 @@ Cellular_Interface_Rollback
         ANSC_HANDLE                 hInsContext
     );
 
+/***********************************************************************
+
+ APIs for Object:
+
+    Cellular.Interface.{i}.X_RDK_Identification.
+
+    *  Identification_GetParamStringValue
+
+***********************************************************************/
+
+ULONG
+Identification_GetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    );
+
+/***********************************************************************
+
+ APIs for Object:
+
+    Cellular.Interface.{i}.X_RDK_PlmnAccess.
+
+    *  PlmnAccess_GetParamUlongValue
+    *  PlmnAccess_GetParamBoolValue
+    *  HomeNetwork_GetParamStringValue
+    *  NetworkInUse_GetParamStringValue
+    
+***********************************************************************/
+BOOL
+PlmnAccess_GetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG*                      puLong
+    );
+
+BOOL
+PlmnAccess_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    );
+
 ULONG
 HomeNetwork_GetParamStringValue
     (
@@ -259,14 +304,53 @@ NetworkInUse_GetParamStringValue
 
  APIs for Object:
 
-    Cellular.Interface.{i}.X_RDK_Identification.
+    Cellular.Interface.{i}.X_RDK_PlmnAccess.AvailableNetworks.{i}.
 
-    *  Identification_GetParamStringValue
+    *  AvailableNetworks_IsUpdated
+    *  AvailableNetworks_Synchronize
+    *  AvailableNetworks_GetEntryCount
+    *  AvailableNetworks_GetEntry
+    *  AvailableNetworks_GetParamBoolValue
+    *  AvailableNetworks_GetParamStringValue
 
 ***********************************************************************/
 
+BOOL
+AvailableNetworks_IsUpdated
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+
 ULONG
-Identification_GetParamStringValue
+AvailableNetworks_Synchronize
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+
+ULONG
+AvailableNetworks_GetEntryCount
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+
+ANSC_HANDLE
+AvailableNetworks_GetEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ULONG                       nIndex,
+        ULONG*                      pInsNumber
+    );
+
+BOOL
+AvailableNetworks_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    );
+
+ULONG
+AvailableNetworks_GetParamStringValue
     (
         ANSC_HANDLE                 hInsContext,
         char*                       ParamName,

@@ -425,5 +425,27 @@ int cellular_hal_get_modem_firmware_version(char *firmware_version)
     cellular_hal_qmi_get_modem_firmware_version( firmware_version );
 #endif
 
+    return RETURN_OK;
+}
+
+int cellular_hal_get_current_plmn_information(CellularCurrentPlmnInfoStruct *plmn_info)
+{
+
+#ifdef QMI_SUPPORT
+    //Get Current PLMN Network Information
+    cellular_hal_qmi_get_current_plmn_information( plmn_info );
+#endif
+
+    return RETURN_OK; 
+}
+
+int cellular_hal_get_available_networks_information(CellularNetworkScanResultInfoStruct **network_info, unsigned int *total_network_count)
+{
+
+#ifdef QMI_SUPPORT
+    //Get Available networks
+    cellular_hal_qmi_get_available_networks_information( network_info, total_network_count );
+#endif
+
     return RETURN_OK; 
 }

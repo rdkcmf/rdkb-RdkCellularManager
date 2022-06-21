@@ -340,8 +340,10 @@ ANSC_STATUS DmlCellularInitialize ( ANSC_HANDLE  hDml )
         
         pstInterfaceInfo->Enable              = TRUE;
         pstInterfaceInfo->Status              = IF_DOWN;
-        pstInterfaceInfo->RoamingStatus       = ROAMING_STATUS_HOME;
         pstInterfaceInfo->X_RDK_RegisteredService = REGISTERED_SERVICE_NONE; 
+
+        pstInterfaceInfo->stPlmnAccessInfo.RoamingStatus  = ROAMING_STATUS_HOME;
+        pstInterfaceInfo->stPlmnAccessInfo.ulAvailableNetworkNoOfEntries  = 0;
 
         //Below information ready once Modem Opened
         pstInterfaceInfo->ulNeighbourNoOfEntries = 0;
@@ -563,6 +565,7 @@ int CellularMgr_AccessPointGetProfileList( CELLULAR_INTERFACE_ACCESSPOINT_INFO  
                     snprintf(pstAPInfo[i].Password, sizeof(pstAPInfo[i].Password), pstProfileOutput[i].Password);
                     pstAPInfo[i].X_RDK_ApnAuthentication  = pstProfileOutput[i].PDPAuthentication;
                     pstAPInfo[i].X_RDK_PdpInterfaceConfig = CELLULAR_PDP_NETWORK_CONFIG_NAS;
+                    pstAPInfo[i].X_RDK_Roaming            = ( pstProfileOutput[i].bIsNoRoaming ) ? FALSE : TRUE;
 
                     if( CELLULAR_PDP_TYPE_IPV4 == pstProfileOutput[i].PDPType )
                     {
@@ -643,6 +646,7 @@ int CellularMgr_AccessPointCreateProfile( PCELLULAR_INTERFACE_ACCESSPOINT_INFO p
     snprintf(stProfileInput.Password, sizeof(stProfileInput.Password), pstAPInfo->Password);
     stProfileInput.PDPAuthentication        = pstAPInfo->X_RDK_ApnAuthentication;
     stProfileInput.PDPNetworkConfig         = pstAPInfo->X_RDK_PdpInterfaceConfig;
+    stProfileInput.bIsNoRoaming             = ( pstAPInfo->X_RDK_Roaming ) ? FALSE : TRUE;
 
     if( INTERFACE_PROFILE_FAMILY_IPV4 == pstAPInfo->X_RDK_IpAddressFamily )
     {
@@ -685,6 +689,7 @@ int CellularMgr_AccessPointDeleteProfile( PCELLULAR_INTERFACE_ACCESSPOINT_INFO p
     snprintf(stProfileInput.Password, sizeof(stProfileInput.Password), pstAPInfo->Password);
     stProfileInput.PDPAuthentication        = pstAPInfo->X_RDK_ApnAuthentication;
     stProfileInput.PDPNetworkConfig         = pstAPInfo->X_RDK_PdpInterfaceConfig;
+    stProfileInput.bIsNoRoaming             = ( pstAPInfo->X_RDK_Roaming ) ? FALSE : TRUE;
 
     if( INTERFACE_PROFILE_FAMILY_IPV4 == pstAPInfo->X_RDK_IpAddressFamily )
     {
@@ -723,6 +728,7 @@ int CellularMgr_AccessPointModifyProfile( PCELLULAR_INTERFACE_ACCESSPOINT_INFO p
     snprintf(stProfileInput.Password, sizeof(stProfileInput.Password), pstAPInfo->Password);
     stProfileInput.PDPAuthentication        = pstAPInfo->X_RDK_ApnAuthentication;
     stProfileInput.PDPNetworkConfig         = pstAPInfo->X_RDK_PdpInterfaceConfig;
+    stProfileInput.bIsNoRoaming             = ( pstAPInfo->X_RDK_Roaming ) ? FALSE : TRUE;
 
     if( INTERFACE_PROFILE_FAMILY_IPV4 == pstAPInfo->X_RDK_IpAddressFamily )
     {
@@ -848,12 +854,6 @@ int CellularMgr_ServingSystemInfo( CELLULAR_INTERFACE_INFO  *pstInterfaceInfo, C
         }
         else {
            pstInterfaceInfo->Status = IF_DOWN;
-        }
-        if( DEVICE_NAS_STATUS_ROAMING_OFF == (CellularDeviceNASRoamingStatus_t)roaming_status ) {
-           pstInterfaceInfo->RoamingStatus = ROAMING_STATUS_HOME;
-        }
-        else {
-           pstInterfaceInfo->RoamingStatus = ROAMING_STATUS_VISITOR;
         }
     }
     if (pstContextProfileInfo != NULL) {
@@ -1011,4 +1011,72 @@ int CellularMgr_GetActiveCardStatus( CELLULAR_INTERFACE_SIM_STATUS *enCardStatus
 int CellularMgr_GetModemFirmwareVersion(char *pcFirmwareVersion)
 {
     return( cellular_hal_get_modem_firmware_version( pcFirmwareVersion ) );
+}
+
+int CellularMgr_GetPlmnInformation( PCELLULAR_PLMNACCESS_INFO pstPlmnAccessInfo)
+{
+    CellularCurrentPlmnInfoStruct stPlmnInfo = {0};
+
+    if( RETURN_OK == cellular_hal_get_current_plmn_information( &stPlmnInfo ) )
+    {
+        pstPlmnAccessInfo->RoamingEnable = stPlmnInfo.roaming_enabled;
+
+        if( TRUE == pstPlmnAccessInfo->RoamingEnable )
+        {
+            pstPlmnAccessInfo->RoamingStatus = ROAMING_STATUS_HOME;
+        }
+        else
+        {
+            pstPlmnAccessInfo->RoamingStatus = ROAMING_STATUS_VISITOR;
+        }
+
+        snprintf( pstPlmnAccessInfo->NetworkInUse_MCC, sizeof(pstPlmnAccessInfo->NetworkInUse_MCC), "%d", stPlmnInfo.MCC );
+        snprintf( pstPlmnAccessInfo->NetworkInUse_MNC, sizeof(pstPlmnAccessInfo->NetworkInUse_MNC), "%d", stPlmnInfo.MNC );
+        snprintf( pstPlmnAccessInfo->NetworkInUse_Name, sizeof(pstPlmnAccessInfo->NetworkInUse_Name), "%s", stPlmnInfo.plmn_name );
+
+        snprintf( pstPlmnAccessInfo->HomeNetwork_MCC, sizeof(pstPlmnAccessInfo->HomeNetwork_MCC), "%d", stPlmnInfo.MCC );
+        snprintf( pstPlmnAccessInfo->HomeNetwork_MNC, sizeof(pstPlmnAccessInfo->HomeNetwork_MNC), "%d", stPlmnInfo.MNC );
+        snprintf( pstPlmnAccessInfo->HomeNetwork_Name, sizeof(pstPlmnAccessInfo->HomeNetwork_Name), "%s", stPlmnInfo.plmn_name );
+
+        return RETURN_OK;
+    }
+
+    return RETURN_ERROR;
+}
+
+int CellularMgr_GetAvailableNetworksInformation( PCELLULAR_PLMN_AVAILABLENETWORK_INFO *ppAvailableNetworkInfo, unsigned int *puiTotalCount )
+{
+    CellularNetworkScanResultInfoStruct *network_info = NULL;
+    unsigned int total_network_count = 0;
+
+    *puiTotalCount = 0;
+
+    if( NULL != *ppAvailableNetworkInfo )
+    {
+        free( *ppAvailableNetworkInfo );
+        *ppAvailableNetworkInfo = NULL;
+    }
+
+    if( RETURN_OK == cellular_hal_get_available_networks_information( &network_info, &total_network_count ) )
+    {
+        if( 0 < total_network_count )
+        {
+            CELLULAR_PLMN_AVAILABLENETWORK_INFO *pstTmpInfo = NULL;
+            int i = 0;
+
+            pstTmpInfo = (CELLULAR_PLMN_AVAILABLENETWORK_INFO*) malloc( sizeof(CELLULAR_PLMN_AVAILABLENETWORK_INFO) * total_network_count );
+
+            for( i = 0; i < total_network_count; i++ )
+            {
+                snprintf( pstTmpInfo[i].MCC, sizeof(pstTmpInfo[i].MCC), "%d", network_info[i].MCC );
+                snprintf( pstTmpInfo[i].MNC, sizeof(pstTmpInfo[i].MNC), "%d", network_info[i].MNC );
+                snprintf( pstTmpInfo[i].Name, sizeof(pstTmpInfo[i].Name), "%d", network_info[i].network_name );
+                pstTmpInfo[i].Allowed = network_info[i].roaming_flag;
+            }
+
+            *ppAvailableNetworkInfo = pstTmpInfo;
+        }
+    }
+
+    return RETURN_OK;
 }

@@ -168,6 +168,13 @@ typedef enum _CellularModemRegisteredServiceType_t
 } 
 CellularModemRegisteredServiceType_t;
 
+typedef enum _CellularRegistrationStatus_t
+{
+   DEVICE_REGISTERED = 1,
+   DEVICE_NOT_REGISTERED,
+
+}CellularRegistrationStatus_t;
+
 /** Interface Input */
 typedef  struct                                     
 {
@@ -284,6 +291,28 @@ typedef  struct
     int                         SNR;
 
 } CellularSignalInfoStruct;
+
+typedef  struct                                     
+{
+    char                                    plmn_name[32];
+    unsigned int                            MCC;
+    unsigned int                            MNC;
+    CellularRegistrationStatus_t            registration_status;
+    CellularModemRegisteredServiceType_t    registered_service;
+    unsigned char                           roaming_enabled;
+    unsigned int                            area_code;
+    unsigned long                           cell_id;
+
+} CellularCurrentPlmnInfoStruct;
+
+typedef  struct                                     
+{
+    char                                    network_name[32];
+    unsigned int                            MCC;
+    unsigned int                            MNC;
+    unsigned char                           roaming_flag;
+
+} CellularNetworkScanResultInfoStruct;
 
 /* Cellular Device Status Events and Callbacks */
 typedef enum _CellularDeviceDetectionStatus_t
@@ -805,5 +834,32 @@ int cellular_hal_set_modem_network_detach( void );
 *
 */
 int cellular_hal_get_modem_firmware_version(char *firmware_version);
+
+/* cellular_hal_get_current_plmn_information function */
+/**
+* @description - This API get current plmn information from modem 
+*
+* @param[in] plmn_info - The strcture receives function pointers for current plmn network information response from modem.
+*                                              
+* @return The status of the operation
+* @retval RETURN_OK if successful
+* @retval RETURN_ERR if any error is detected
+*
+*/
+int cellular_hal_get_current_plmn_information(CellularCurrentPlmnInfoStruct *plmn_info);
+
+/* cellular_hal_get_available_networks_information function */
+/**
+* @description - This API get current active card status information from modem 
+*
+* @param[out] CellularNetworkScanResultInfoStruct - The structure filled with available networks information from Modem.
+* @param[out] total_network_count - This variable filled with total no of available networks
+*                                              
+* @return The status of the operation
+* @retval RETURN_OK if successful
+* @retval RETURN_ERR if any error is detected
+*
+*/
+int cellular_hal_get_available_networks_information(CellularNetworkScanResultInfoStruct **network_info, unsigned int *total_network_count);
 
 #endif //_CELLULAR_HAL_H_
