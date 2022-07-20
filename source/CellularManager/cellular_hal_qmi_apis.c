@@ -45,6 +45,7 @@
 #define  CELLULAR_QMI_GETNETWORK_VIA_DML_MAX_TTL                ( 60 )
 
 #define  CELLULAR_QMI_ICCID_MAX_LENGTH                          ( 21 )
+#define  CELLULAR_QMI_OPERATOR_LENGTH                           ( 32 )
 #define  CELLULAR_QMI_NETWORKSCAN_MAX_LENGTH                    ( 128 )
 
 #define  CELLULAR_QMI_NETWORKSCAN_COLLECTION_PERIODIC_INTERVAL  ( 60 )
@@ -264,18 +265,19 @@ typedef struct
     NASAvailableNetworkInfo         astNetworkInfo[CELLULAR_QMI_NETWORKSCAN_MAX_LENGTH];
     unsigned long                   LastCollectedTimeForPlmnInfo;
     CellularCurrentPlmnInfoStruct   stPlmnInfo;
+    gchar                           operator_name[CELLULAR_QMI_OPERATOR_LENGTH];
 
 } ContextNASInfo;
 
 typedef struct 
 {
-    guint8					bSlotState;
-    guint8					bCardPresentState;
-    guint8					bCardEnable;
-    gchar                   iccid[CELLULAR_QMI_ICCID_MAX_LENGTH];
-    gchar                   msisdn[20];
-    guint8					beUICCAvailable;
-    gchar                   eid[20];
+    guint8                          bSlotState;
+    guint8                          bCardPresentState;
+    guint8                          bCardEnable;
+    gchar                           iccid[CELLULAR_QMI_ICCID_MAX_LENGTH];
+    gchar                           msisdn[20];
+    guint8                          beUICCAvailable;
+    gchar                           eid[20];
 
 } ContextSlotInfo;
 
@@ -2634,6 +2636,35 @@ int cellular_hal_qmi_get_total_no_of_uicc_slots(unsigned int *total_count)
     }
 }
 
+static int cellular_hal_qmi_get_mno_name(char *mnoname)
+{
+    if( ( NULL != gpstQMIContext ) && \
+        ( NULL != gpstQMIContext->qmiDevice ) && \
+        ( TRUE == qmi_device_is_open( gpstQMIContext->qmiDevice ) ) )
+    {
+        ContextNASInfo *nasCtx = &(gpstQMIContext->nasCtx);
+
+        if( NULL != nasCtx->nasClient  && nasCtx->enNASRegistrationStatus == DEVICE_NAS_STATUS_REGISTERED)
+        {
+            if( '\0' != nasCtx->operator_name[0] )
+            {
+              strncpy( mnoname, nasCtx->operator_name, CELLULAR_QMI_OPERATOR_LENGTH);  
+              CELLULAR_HAL_DBG_PRINT("%s - Operator/Mno Name '%s' Retrived\n", __FUNCTION__,mnoname);
+            }
+        }
+        else
+        {
+            CELLULAR_HAL_DBG_PRINT("%s - NAS client is not ready so current operator name is empty \n", __FUNCTION__);
+        }
+    }
+    else
+    {
+        CELLULAR_HAL_DBG_PRINT("%s - QMI Device is not ready  ..can not populate any info now \n", __FUNCTION__);
+        return RETURN_ERROR;
+    }
+    return RETURN_OK;
+}
+
 int cellular_hal_qmi_get_uicc_slot_info(unsigned int slot_id, CellularUICCSlotInfoStruct *pstSlotInfo)
 {    
     //Check whether QMI ready or not
@@ -2669,19 +2700,21 @@ int cellular_hal_qmi_get_uicc_slot_info(unsigned int slot_id, CellularUICCSlotIn
                         pstSlotInfo->Status = CELLULAR_UICC_STATUS_ERROR;
                     }
                 
-                    if( '\0' != pstSlot->iccid[0] )
+                    if (pstSlotInfo->CardEnable)   // card is present and powered on
                     {
+                      if( '\0' != pstSlot->iccid[0] )
+                      {
                         memcpy(pstSlotInfo->iccid, pstSlot->iccid, strlen(pstSlot->iccid) + 1 );
-                    }
-
-                    if( '\0' != pstSlot->msisdn[0] )
-                    {
+                      }
+                      
+                      if( '\0' != pstSlot->msisdn[0] )
+                      {
                         memcpy(pstSlotInfo->msisdn, pstSlot->msisdn, strlen(pstSlot->msisdn) + 1 );
-                    } 
-                    else
-                    {
+                      }
+                      else
+                      {
                         char msisdn[20] = {0};
-
+                        
                         memset(msisdn, 0, sizeof(msisdn));
                         cellular_hal_qmi_get_msisdn_information(msisdn);
 
@@ -2691,8 +2724,11 @@ int cellular_hal_qmi_get_uicc_slot_info(unsigned int slot_id, CellularUICCSlotIn
                             memcpy(pstSlot->msisdn, msisdn, strlen(msisdn) + 1 );
                             memcpy(pstSlotInfo->msisdn, pstSlot->msisdn, strlen(pstSlot->msisdn) + 1 );
                         }
+                      }
+                      //get operator name from NAS context only when slot is active
+                      if(pstSlotInfo->SlotEnable)
+                        cellular_hal_qmi_get_mno_name(pstSlotInfo->MnoName);
                     }
-
                     return RETURN_OK;
                 }
             }
@@ -2845,6 +2881,7 @@ static void cellular_hal_qmi_monitor_get_serving_system (QmiClientNas *nasClient
     QMIContextStructPrivate   *pstQMIContext  = NULL;
     ContextModemRegistration  *pDeviceRegCtx = NULL;
     ContextNASInfo   *nasCtx = NULL;
+    const gchar *description = NULL;
 
     pDeviceRegCtx  = g_task_get_task_data (task);
     pstQMIContext   = (QMIContextStructPrivate*)pDeviceRegCtx->vpPrivateData;
@@ -2921,6 +2958,19 @@ static void cellular_hal_qmi_monitor_get_serving_system (QmiClientNas *nasClient
             {
                 bIsLTENetworkDetected = TRUE;
             }
+        }
+		
+        memset(nasCtx->operator_name,0, sizeof(nasCtx->operator_name)); 
+        qmi_message_nas_get_serving_system_output_get_current_plmn (output, NULL, NULL, &description, NULL);
+		
+        if( description != NULL && description[0] != '\0')
+        {
+            strncpy(nasCtx->operator_name, description, sizeof(nasCtx->operator_name));
+            CELLULAR_HAL_DBG_PRINT("%s Operator/Mno Name retrieved: '%s'\n",__FUNCTION__,nasCtx->operator_name);
+        }
+        else
+        {
+            CELLULAR_HAL_DBG_PRINT("%s ERORR!! Couldn't get Operator/Mno name\n",__FUNCTION__);
         }
 
         nasCtx->enNASRegistrationStatus = DEVICE_NAS_STATUS_NOT_REGISTERED;

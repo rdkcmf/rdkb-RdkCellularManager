@@ -276,7 +276,7 @@ typedef  struct
     CellularUICCFormFactor_t    FormFactor;
     CellularUICCApplication_t   Application;
     CellularUICCStatus_t        Status;
-    char                        MnoName[16];
+    char                        MnoName[32];
     char                        iccid[20];
     char                        msisdn[20];
 

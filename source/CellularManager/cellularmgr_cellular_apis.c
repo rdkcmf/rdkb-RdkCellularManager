@@ -978,6 +978,7 @@ int CellularMgr_GetUICCSlotInfo(UINT uiSlotID, PCELLULAR_UICC_SLOT_INFO  pstUICC
 
         snprintf( pstUICCSlotInfo->Iccid, sizeof(pstUICCSlotInfo->Iccid), stSlotInfo.iccid );
         snprintf( pstUICCSlotInfo->Msisdn, sizeof(pstUICCSlotInfo->Msisdn), stSlotInfo.msisdn );
+        snprintf( pstUICCSlotInfo->MnoName, sizeof(pstUICCSlotInfo->MnoName), stSlotInfo.MnoName );
 
         return RETURN_OK;
     }
