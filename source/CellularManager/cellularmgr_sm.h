@@ -70,8 +70,6 @@ void CellularMgrSMSetCellularEnable( unsigned char bRDKEnable );
 
 int CellularMgrGetCurrentPDPContextStatusInformation( PCELLULAR_INTERFACE_CONTEXTPROFILE_INFO  pstContextProfileInfo );
 
-int CellularMgrSMSetCellularInterfaceEnable(BOOLEAN bEnable);
-
 int cellular_get_serving_info(int *registration_status, int *roaming_status,  int *attach_status);
 
 int CellularMgrGetNetworkRegisteredService( CELLULAR_INTERFACE_REGISTERED_SERVICE_TYPE  *penRegisteredService );

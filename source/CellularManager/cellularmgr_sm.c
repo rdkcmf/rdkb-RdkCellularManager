@@ -107,7 +107,6 @@ extern int sysevent_fd;
 extern token_t sysevent_token;
 static int iter=0;
 static int max_wait = 0;
-static int cm_nas_detach = 0;
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /**********************************************************************
@@ -590,11 +589,6 @@ static CellularPolicySmState_t TransitionRegistering( void )
     }
 
     gpstCellularPolicyCtrl->enDeviceNASRegisterStatus = DEVICE_NAS_STATUS_REGISTERING;
-    if(cm_nas_detach == 1)
-    {
-	cellular_hal_set_modem_network_attach();
-	cm_nas_detach = 0;
-    }
 
     //Request Device NAS Registration
     cellular_hal_monitor_device_registration( CellularMgrDeviceRegistrationStatusCBForSM );
@@ -755,8 +749,6 @@ static CellularPolicySmState_t TransitionConnectedStopNetwork( void )
     }
     if( FALSE == gpstCellularPolicyCtrl->pCmIfData->Enable )
     {
-        cellular_hal_set_modem_network_detach();
-        cm_nas_detach = 1;
         gpstCellularPolicyCtrl->enDeviceNASRegisterStatus = DEVICE_NAS_STATUS_NOT_REGISTERED;
         CellularMgrSMSetCurrentState(CELLULAR_STATE_DEREGISTERED);
         return CELLULAR_STATE_DEREGISTERED;
@@ -794,11 +786,6 @@ void CellularMgrSMSetCellularEnable( unsigned char bRDKEnable )
     gpstCellularPolicyCtrl->bRDKEnable = bRDKEnable;
 }
 
-int CellularMgrSMSetCellularInterfaceEnable(BOOLEAN bEnable)
-{
-   gpstCellularPolicyCtrl->pCmIfData->Enable = bEnable;
-   return 0;
-}
 static CellularPolicySmState_t StateDown( void )
 {
     //Validate Input
@@ -959,8 +946,6 @@ static CellularPolicySmState_t StateRegistered( void )
           ( SIM_STATUS_VALID != enCardStatus ) ) ||
         ( gpstCellularPolicyCtrl->pCmIfData->Enable == FALSE ) )
     {
-        cellular_hal_set_modem_network_detach();
-        cm_nas_detach = 1;
         gpstCellularPolicyCtrl->enDeviceNASRegisterStatus = DEVICE_NAS_STATUS_NOT_REGISTERED;
         CellularMgrSMSetCurrentState(CELLULAR_STATE_DEREGISTERED);
         return CELLULAR_STATE_DEREGISTERED;

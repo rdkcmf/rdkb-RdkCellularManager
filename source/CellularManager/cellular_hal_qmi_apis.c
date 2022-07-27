@@ -2860,9 +2860,9 @@ static void cellular_hal_qmi_monitor_get_serving_system (QmiClientNas *nasClient
             if( NAS_MODEM_REGISTRATION_MONITOR_VIA_SM == pDeviceRegCtx->enQuerySource )
             {
                 CELLULAR_HAL_DBG_PRINT("%s - Modem Registration not completed so trying to sync again in 5seconds\n",__FUNCTION__);
-		if (retry_get_serving_system == 3) //FIXME: This is to avoid blocking in QMI layer.Indication comes instead of retry op
+		if (retry_get_serving_system >= 3) // This is to avoid retry in QMI layer.Indication comes instead of retry op
 		{
-                    pDeviceRegCtx->enNASRegistrationStatus = DEVICE_NAS_STATUS_NOT_REGISTERED;
+                    pDeviceRegCtx->enNASRegistrationStatus = DEVICE_NAS_STATUS_REGISTERING;
                     retry_get_serving_system = 0;
                     goto LASTSTEP;
                 }

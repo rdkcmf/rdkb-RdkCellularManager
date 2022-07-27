@@ -938,8 +938,6 @@ int CellularMgr_GetModemInterfaceStatus( CellularInterfaceStatus_t *interface_st
 
 int CellularMgr_SetModemInterfaceEnable( BOOLEAN bEnable )
 {
-    return CellularMgrSMSetCellularInterfaceEnable(bEnable);
-#if 0
     //Network attach/detach operation
     if( bEnable )
     {
@@ -949,7 +947,6 @@ int CellularMgr_SetModemInterfaceEnable( BOOLEAN bEnable )
     {
         return ( cellular_hal_set_modem_network_detach( ) );
     }
-#endif
 }
 
 int CellularMgr_SetSIMPowerEnable( UINT uiSlotID, BOOLEAN bEnable )
