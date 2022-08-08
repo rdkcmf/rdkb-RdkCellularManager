@@ -4780,7 +4780,7 @@ static void cellular_hal_qmi_profile_operation_step( GTask *task )
                                 continue;
                             }
 
-                            if ( ( 0 == strcmp(pstProfileList[i].APN, pstInputProfile->APN) ) && \
+                            if ( ( 0 == strcasecmp(pstProfileList[i].APN, pstInputProfile->APN) ) && \
                                 ( 0 == strcmp(pstProfileList[i].Username, pstInputProfile->Username) )  && \
                                 ( 0 == strcmp(pstProfileList[i].Password, pstInputProfile->Password) ) && \
                                 ( pstProfileList[i].PDPType == pstInputProfile->PDPType ) && \
