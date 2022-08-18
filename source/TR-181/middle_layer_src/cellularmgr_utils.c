@@ -98,7 +98,13 @@ int CellularMgr_Util_SendIPToWanMgr( CellularIPStruct *pstIPStruct )
         // send ipv6 lease info to wanmanager via pandm
 
         // LTE sends us only the ipv6 address, so assigning the default value for rest of the values
+#if defined(FEATURE_RDKB_CONFIGURABLE_WAN_INTERFACE)
+        char ifName[64] = {0};
+        char * fifo_pattern = "dibbler-client add %s '%s' '1' '\\0' '\\0' '\\0' '\\0' '\\0' %d '1' '\\0' '\\0' '3600' '7200' ''";
+        strncpy (ifName, pstIPStruct->WANIFName, sizeof(ifName) - 1);
+#else
         char * fifo_pattern = "dibbler-client add '%s' '1' '\\0' '\\0' '\\0' '\\0' '\\0' %d '1' '\\0' '\\0' '3600' '7200' ''";
+#endif
         char ipv6_addr [128] = {0};
         char temp [128] = {0};
         char buff [512] = {0};
@@ -117,7 +123,11 @@ int CellularMgr_Util_SendIPToWanMgr( CellularIPStruct *pstIPStruct )
 
         }
         // copy the ipv6_addr and string len to string pattern so reading side can parse it
+#if defined(FEATURE_RDKB_CONFIGURABLE_WAN_INTERFACE)
+        snprintf(buff, sizeof (buff), fifo_pattern, ifName, ipv6_addr, pref_len);
+#else
         snprintf(buff, sizeof (buff), fifo_pattern,ipv6_addr,pref_len);
+#endif
 
         // open fifo
         sock = open(CCSP_COMMON_FIFO, O_WRONLY);
