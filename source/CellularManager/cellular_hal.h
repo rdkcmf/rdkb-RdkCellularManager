@@ -311,7 +311,7 @@ typedef  struct
     char                                    network_name[32];
     unsigned int                            MCC;
     unsigned int                            MNC;
-    unsigned char                           roaming_flag;
+    unsigned char                           network_allowed_flag;
 
 } CellularNetworkScanResultInfoStruct;
 

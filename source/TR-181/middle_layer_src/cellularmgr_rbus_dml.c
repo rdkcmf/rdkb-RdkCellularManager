@@ -1070,18 +1070,31 @@ static rbusError_t PlmnAccess_GetParamStringValue_rbus(rbusHandle_t handle, rbus
 
 bool AvailableNetworks_IsUpdated_rbus(void* ctx)
 {
-    
-    PCELLULAR_INTERFACE_INFO     pstInterfaceInfo = (PCELLULAR_INTERFACE_INFO)((HandlerContext *)ctx)->userData;
-    if (pstInterfaceInfo == NULL)
+    PCELLULARMGR_CELLULAR_DATA  pMyObject      =  (PCELLULARMGR_CELLULAR_DATA) g_pBEManager->hCellular;
+    PCELLULAR_DML_INFO          pstDmlCellular =  (PCELLULAR_DML_INFO) pMyObject->pstDmlCellular;
+    PCELLULAR_INTERFACE_INFO   pstInterfaceInfo = NULL;
+    INT index = 0;
+
+    if (pstDmlCellular == NULL)
     {
-        CcspTraceError(("%s-%d : pstInterfaceInfo==Null \n",__FUNCTION__, __LINE__));
         return false;
     }
+
+    sscanf(((HandlerContext *)ctx)->fullName, "Device.Cellular.Interface.%d.X_RDK_PlmnAccess.", &index);
+    if ((pstDmlCellular->ulInterfaceNoEntries > 0) && index)
+    {
+        pstInterfaceInfo = &(pstDmlCellular->pstInterfaceInfo[index-1]);
+    }
+
+    if (pstInterfaceInfo == NULL)
+    {
+        return false;
+    }
+
 
     PCELLULAR_PLMNACCESS_INFO    pstPlmnInfo      = &(pstInterfaceInfo->stPlmnAccessInfo);
     if (pstPlmnInfo == NULL)
     {
-        CcspTraceError(("%s-%d : pstPlmnInfo==Null \n",__FUNCTION__, __LINE__));
         return false;
     }
 
@@ -1091,16 +1104,31 @@ bool AvailableNetworks_IsUpdated_rbus(void* ctx)
     }
     else
     {
-        CcspTraceError(("%s-%d : YES \n",__FUNCTION__, __LINE__));
         pstPlmnInfo->ulAvailableNetworkListLastUpdatedTime =  AnscGetTickInSeconds();
-        return true;
+        CcspTraceError(("%s-%d :YES\n",__FUNCTION__, __LINE__));
+	return true;
     }
     return true;
 }
 
 rbusError_t AvailableNetworks_Synchronize_rbus(void* ctx)
 {
-    PCELLULAR_INTERFACE_INFO     pstInterfaceInfo = (PCELLULAR_INTERFACE_INFO)((HandlerContext *)ctx)->userData;
+    PCELLULARMGR_CELLULAR_DATA  pMyObject      =  (PCELLULARMGR_CELLULAR_DATA) g_pBEManager->hCellular;
+    PCELLULAR_DML_INFO          pstDmlCellular =  (PCELLULAR_DML_INFO) pMyObject->pstDmlCellular;
+    PCELLULAR_INTERFACE_INFO   pstInterfaceInfo = NULL;
+    INT index = 0;
+
+    if (pstDmlCellular == NULL)
+    {
+        return RBUS_ERROR_BUS_ERROR;
+    }
+
+    sscanf(((HandlerContext *)ctx)->fullName, "Device.Cellular.Interface.%d.X_RDK_PlmnAccess.", &index);
+    if ((pstDmlCellular->ulInterfaceNoEntries > 0) && index)
+    {
+        pstInterfaceInfo = &(pstDmlCellular->pstInterfaceInfo[index-1]);
+    }
+
     if (pstInterfaceInfo == NULL)
     {
         return RBUS_ERROR_BUS_ERROR;
@@ -1111,10 +1139,6 @@ rbusError_t AvailableNetworks_Synchronize_rbus(void* ctx)
     {
         return RBUS_ERROR_BUS_ERROR;
     }
-
-    INT index = 0;
-
-    sscanf(((HandlerContext *)ctx)->fullName, "Device.Cellular.Interface.%d.X_RDK_PlmnAccess.", &index);
 
     ULONG AvailableNetworkCurrentEntriesCount = pstPlmnInfo->ulAvailableNetworkNoOfEntries;
 
@@ -1223,6 +1247,7 @@ static rbusError_t AvailableNetworks_GetParamStringValue_rbus(rbusHandle_t handl
         return ret;
 
     context = GetPropertyContext(property);
+
     PCELLULAR_PLMN_AVAILABLENETWORK_INFO  pstAvailableNetworks =(PCELLULAR_PLMN_AVAILABLENETWORK_INFO)context.userData;
     if (pstAvailableNetworks == NULL)
     {

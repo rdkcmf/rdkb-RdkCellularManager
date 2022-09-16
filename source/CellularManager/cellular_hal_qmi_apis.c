@@ -244,7 +244,7 @@ typedef struct
     guint16                         mcc;
     guint16                         mnc;
     gchar                           name[32];
-    gint8                           roaming_allowed_flag;
+    gint8                           network_allowed_flag;
 
 } NASAvailableNetworkInfo;
 
@@ -3426,7 +3426,7 @@ static void cellular_hal_qmi_network_scan_ready (QmiClientNas *client,
     nasCtx          = &(pstQMIContext->nasCtx);
 
     nasCtx->iTotalNoofNetworkInfo = 0;
-    memset( &nasCtx->astNetworkInfo, 0, sizeof( &nasCtx->astNetworkInfo ));
+    memset( &nasCtx->astNetworkInfo, 0, sizeof( nasCtx->astNetworkInfo ));
 
     output = qmi_client_nas_network_scan_finish (client, res, &error);
     if (!output) {
@@ -3458,11 +3458,11 @@ static void cellular_hal_qmi_network_scan_ready (QmiClientNas *client,
             nasCtx->astNetworkInfo[TotalEntries].mnc = element->mnc;
             snprintf(nasCtx->astNetworkInfo[TotalEntries].name, sizeof(nasCtx->astNetworkInfo[TotalEntries].name), "%s", element->description);
             
-            nasCtx->astNetworkInfo[TotalEntries].roaming_allowed_flag = FALSE; 
+            nasCtx->astNetworkInfo[TotalEntries].network_allowed_flag = FALSE; 
             if( ( NULL != status_str ) &&
-                ( NULL != strstr(status_str, "roaming" )) )
+                ( NULL != strstr(status_str, "not-forbidden" )) )
             {
-                nasCtx->astNetworkInfo[TotalEntries].roaming_allowed_flag = TRUE; 
+                nasCtx->astNetworkInfo[TotalEntries].network_allowed_flag = TRUE; 
             }
 
             ++TotalEntries;
@@ -3648,10 +3648,23 @@ int cellular_hal_qmi_get_available_networks_information(CellularNetworkScanResul
 
             if( 0 < nasCtx->iTotalNoofNetworkInfo )
             {
-                *network_info = malloc( sizeof( NASAvailableNetworkInfo ) * nasCtx->iTotalNoofNetworkInfo );
-                memset( *network_info, 0, sizeof( NASAvailableNetworkInfo ) * nasCtx->iTotalNoofNetworkInfo );
-                memcpy( *network_info, &(nasCtx->astNetworkInfo), sizeof( NASAvailableNetworkInfo ) * nasCtx->iTotalNoofNetworkInfo );
-                return RETURN_OK;
+                int i;
+                CellularNetworkScanResultInfoStruct *tmp_network_info = NULL;
+
+                tmp_network_info = malloc( sizeof( CellularNetworkScanResultInfoStruct ) * nasCtx->iTotalNoofNetworkInfo );
+                memset( tmp_network_info, 0, sizeof( CellularNetworkScanResultInfoStruct ) * nasCtx->iTotalNoofNetworkInfo );
+ 		
+		for( i = 0; i < nasCtx->iTotalNoofNetworkInfo; i++ )
+		{
+		    tmp_network_info[i].MCC = nasCtx->astNetworkInfo[i].mcc;
+                    tmp_network_info[i].MNC = nasCtx->astNetworkInfo[i].mnc;
+                    snprintf(tmp_network_info[i].network_name, sizeof(tmp_network_info[i].network_name), "%s", nasCtx->astNetworkInfo[i].name);
+                    tmp_network_info[i].network_allowed_flag = nasCtx->astNetworkInfo[i].network_allowed_flag;
+		}
+		
+		*network_info = tmp_network_info;
+                
+		return RETURN_OK;
            }
         }
     }

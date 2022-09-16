@@ -1078,7 +1078,7 @@ int CellularMgr_GetAvailableNetworksInformation( PCELLULAR_PLMN_AVAILABLENETWORK
         free( *ppAvailableNetworkInfo );
         *ppAvailableNetworkInfo = NULL;
     }
-
+ 
     if( RETURN_OK == cellular_hal_get_available_networks_information( &network_info, &total_network_count ) )
     {
         if( 0 < total_network_count )
@@ -1092,12 +1092,18 @@ int CellularMgr_GetAvailableNetworksInformation( PCELLULAR_PLMN_AVAILABLENETWORK
             {
                 snprintf( pstTmpInfo[i].MCC, sizeof(pstTmpInfo[i].MCC), "%d", network_info[i].MCC );
                 snprintf( pstTmpInfo[i].MNC, sizeof(pstTmpInfo[i].MNC), "%d", network_info[i].MNC );
-                snprintf( pstTmpInfo[i].Name, sizeof(pstTmpInfo[i].Name), "%d", network_info[i].network_name );
-                pstTmpInfo[i].Allowed = network_info[i].roaming_flag;
+                snprintf( pstTmpInfo[i].Name, sizeof(pstTmpInfo[i].Name), "%s", network_info[i].network_name );
+                pstTmpInfo[i].Allowed = network_info[i].network_allowed_flag;
             }
 
             *puiTotalCount = total_network_count;
             *ppAvailableNetworkInfo = pstTmpInfo;
+            
+	    if( NULL != network_info )
+            { 
+                free(network_info);
+                network_info = NULL; 
+            }
         }
     }
 
