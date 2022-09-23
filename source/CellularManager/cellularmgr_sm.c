@@ -509,6 +509,10 @@ static CellularPolicySmState_t TransitionDown( void )
     CcspTraceInfo(("%s %d - State changed to CELLULAR_STATE_DOWN \n", __FUNCTION__, __LINE__));
     CellularMgrSMSetCurrentState(CELLULAR_STATE_DOWN);
 
+    gpstCellularPolicyCtrl->enDeviceSlotSelectionStatus        = DEVICE_SLOT_STATUS_NOT_READY;
+    gpstCellularPolicyCtrl->enNetworkIPv4PacketServiceStatus   = DEVICE_NETWORK_STATUS_DISCONNECTED;
+    gpstCellularPolicyCtrl->enNetworkIPv6PacketServiceStatus   = DEVICE_NETWORK_STATUS_DISCONNECTED;
+
     //PhyStatus should be down
     CcspTraceInfo(("%s - Updating physical status to DOWN for this '%s' interface\n", __FUNCTION__, gpstCellularPolicyCtrl->acWANIfName));
     if ( CellularMgrUpdatePhyStatus (gpstCellularPolicyCtrl->acWANIfName, DEVICE_OPEN_STATUS_NOT_READY) != RETURN_OK)
@@ -807,17 +811,9 @@ static CellularPolicySmState_t StateDown( void )
         gpstCellularPolicyCtrl->enDeviceDetectionStatus = DEVICE_DETECTED;
     }
 
-    if( (DEVICE_DETECTED == gpstCellularPolicyCtrl->enDeviceDetectionStatus ) &&
-        (DEVICE_OPEN_STATUS_NOT_READY == gpstCellularPolicyCtrl->enDeviceOpenStatus ) )
+    if( DEVICE_DETECTED == gpstCellularPolicyCtrl->enDeviceDetectionStatus )
     {
-         TransitionDeactivated( ) ;
-    }
-
-    if( DEVICE_OPEN_STATUS_READY == gpstCellularPolicyCtrl->enDeviceOpenStatus )
-    {
-        CcspTraceInfo(("%s %d - State changed to CELLULAR_STATE_DEACTIVATED \n", __FUNCTION__, __LINE__));
-        CellularMgrSMSetCurrentState(CELLULAR_STATE_DEACTIVATED);
-        return CELLULAR_STATE_DEACTIVATED;
+         return(TransitionDeactivated( ));
     }
 
     return CELLULAR_STATE_DOWN;
