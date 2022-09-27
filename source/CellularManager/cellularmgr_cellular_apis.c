@@ -1023,11 +1023,11 @@ int CellularMgr_GetPlmnInformation( PCELLULAR_PLMNACCESS_INFO pstPlmnAccessInfo)
 
         if( TRUE == pstPlmnAccessInfo->RoamingEnable )
         {
-            pstPlmnAccessInfo->RoamingStatus = ROAMING_STATUS_HOME;
+            pstPlmnAccessInfo->RoamingStatus = ROAMING_STATUS_VISITOR;
         }
         else
         {
-            pstPlmnAccessInfo->RoamingStatus = ROAMING_STATUS_VISITOR;
+            pstPlmnAccessInfo->RoamingStatus = ROAMING_STATUS_HOME;
         }
 
         snprintf( pstPlmnAccessInfo->NetworkInUse_MCC, sizeof(pstPlmnAccessInfo->NetworkInUse_MCC), "%d", stPlmnInfo.MCC );
