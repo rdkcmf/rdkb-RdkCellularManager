@@ -258,8 +258,8 @@ typedef struct
     guint8                          serving_system_id;
     guint8                          bIsModemRegDone;
     guint8                          bIsNetworkScanTaskStillRunning;
-    GCancellable                    *cancellableForNetworkScanTask;
     guint8                          bIsGetNetworkInfoCollectionDone;
+    guint8                          bIsNeed2StopNetworkInfoCollection;
     gint16                          iTotalNoofNetworkInfo;
     NASAvailableNetworkInfo         astNetworkInfo[CELLULAR_QMI_NETWORKSCAN_MAX_LENGTH];
     unsigned long                   LastCollectedTimeForPlmnInfo;
@@ -472,6 +472,7 @@ cellular_hal_qmi_init
         gpstQMIContext->nasCtx.bIsModemRegTaskStillRunning       = FALSE;
         gpstQMIContext->nasCtx.LastCollectedTimeForPlmnInfo      = 0;
         gpstQMIContext->nasCtx.bIsNetworkScanTaskStillRunning    = FALSE;
+        gpstQMIContext->nasCtx.bIsNeed2StopNetworkInfoCollection = FALSE;
         gpstQMIContext->nasCtx.enNASRegistrationStatus           = DEVICE_NAS_STATUS_NOT_REGISTERED;
 
         //WDS
@@ -542,7 +543,8 @@ static void cellular_hal_qmi_reinitialize_context ( void )
         gpstQMIContext->nasCtx.bIsModemRegTaskStillRunning       = FALSE;
         gpstQMIContext->nasCtx.LastCollectedTimeForPlmnInfo      = 0;
         gpstQMIContext->nasCtx.bIsNetworkScanTaskStillRunning    = FALSE;
-        gpstQMIContext->nasCtx.enNASRegistrationStatus           = DEVICE_NAS_STATUS_NOT_REGISTERED;
+        gpstQMIContext->nasCtx.bIsNeed2StopNetworkInfoCollection = FALSE;
+	gpstQMIContext->nasCtx.enNASRegistrationStatus           = DEVICE_NAS_STATUS_NOT_REGISTERED;
 
         //WDS
         gpstQMIContext->wdsCtx.ui8ProfileCount                   = 0;
@@ -635,11 +637,7 @@ static void cellular_hal_qmi_device_removed_cb (QmiDevice *device, gpointer  use
         //If the task still running then needs to stop
         if ( TRUE == nasCtx->bIsNetworkScanTaskStillRunning )
         {
-            g_cancellable_cancel (nasCtx->cancellableForNetworkScanTask);
-            sleep(2);
-            g_object_unref (nasCtx->cancellableForNetworkScanTask);
-            nasCtx->cancellableForNetworkScanTask = NULL;
-
+            nasCtx->bIsNeed2StopNetworkInfoCollection = TRUE;
             nasCtx->iTotalNoofNetworkInfo = 0;
             memset( nasCtx->astNetworkInfo, 0, sizeof( nasCtx->astNetworkInfo ) );
         }
@@ -1679,6 +1677,21 @@ int cellular_hal_qmi_set_modem_operating_configuration(CellularModemOperatingCon
             qmi_message_dms_set_operating_mode_input_unref (input);
             return RETURN_ERROR;
         }
+
+	//Needs to stop network scan thread when modem is going offline since no network is there 
+	if( mode == QMI_DMS_OPERATING_MODE_OFFLINE )
+        {
+           ContextNASInfo *nasCtx = &(gpstQMIContext->nasCtx);
+
+           //If the task still running then needs to stop
+           if ( TRUE == nasCtx->bIsNetworkScanTaskStillRunning )
+           {
+              nasCtx-> bIsNeed2StopNetworkInfoCollection = TRUE;
+              nasCtx->iTotalNoofNetworkInfo = 0;
+              memset( nasCtx->astNetworkInfo, 0, sizeof( nasCtx->astNetworkInfo ) );
+              nasCtx->bIsNetworkScanTaskStillRunning = FALSE;
+           }
+	}
 
         pDeviceModemConfigCtx  = (ContextModemConfiguration*)g_slice_new0 (ContextModemConfiguration);
         pDeviceModemConfigCtx->vpPrivateData = (void*)gpstQMIContext;
@@ -3202,6 +3215,7 @@ static void cellular_hal_qmi_network_scan_data_collection_step( GTask *task )
                 sleep(CELLULAR_QMI_NETWORKSCAN_COLLECTION_PERIODIC_INTERVAL);
 
                 if( ( TRUE == pstQMIContext->IsDeviceRemovedSignalReceived ) ||
+                    ( TRUE == nasCtx->bIsNeed2StopNetworkInfoCollection ) ||
                     ( nasCtx->enNASRegistrationStatus == DEVICE_NAS_STATUS_REGISTERED ) )
                 {
                     //Collection for network scan or cancel when device removed case
@@ -3211,7 +3225,10 @@ static void cellular_hal_qmi_network_scan_data_collection_step( GTask *task )
         }
         case NAS_NETWORK_SCAN_START_COLLECTION:
         {
-            if( FALSE == pstQMIContext->IsDeviceRemovedSignalReceived )
+            ContextNASInfo   *nasCtx = &(pstQMIContext->nasCtx);
+
+            if( ( FALSE == pstQMIContext->IsDeviceRemovedSignalReceived ) &&
+                ( FALSE == nasCtx->bIsNeed2StopNetworkInfoCollection ) )
             {
                 ContextNASInfo   *nasCtx = &(pstQMIContext->nasCtx);
 
@@ -3233,26 +3250,11 @@ static void cellular_hal_qmi_network_scan_data_collection_step( GTask *task )
                 ContextNASInfo   *nasCtx = &(pstQMIContext->nasCtx);
 
                 nasCtx->bIsNetworkScanTaskStillRunning = FALSE;
-
-                if( NULL != nasCtx->cancellableForNetworkScanTask )
-                {
-                    g_object_unref (nasCtx->cancellableForNetworkScanTask);
-                    nasCtx->cancellableForNetworkScanTask = NULL;
-                }
+                nasCtx->bIsNeed2StopNetworkInfoCollection = FALSE;   
             }
-
             g_object_unref (task);
         }
     }
-}
-
-static void cellular_hal_qmi_network_scan_data_collection_thread(GTask *task,
-                                                                 gpointer source_object,
-                                                                 gpointer task_data,
-                                                                 GCancellable *cancellable)
-{
-    CELLULAR_HAL_DBG_PRINT("%s - Network Scan Data Collection Thread:0x%p\n",__FUNCTION__,task);
-    cellular_hal_qmi_network_scan_data_collection_step(task);
 }
 
 static void cellular_hal_qmi_network_scan_data_collection_task_context_free( ContextNetworkScan *pNetworkScanCtx )
@@ -3264,6 +3266,38 @@ static void cellular_hal_qmi_network_scan_data_collection_task_context_free( Con
         g_slice_free(ContextNetworkScan, pNetworkScanCtx);
         pNetworkScanCtx  = NULL;
     }
+}
+
+static void* cellular_hal_qmi_network_scan_start_thread( void *arg )
+{
+    //detach thread from caller stack
+    pthread_detach(pthread_self());
+    
+    CELLULAR_HAL_DBG_PRINT("%s %d - Entry\n",__FUNCTION__,__LINE__);
+
+    ContextNetworkScan  *pNetworkScanCtx = NULL;
+    GTask               *task;
+    ContextNASInfo      *nasCtx = &(gpstQMIContext->nasCtx);
+
+    pNetworkScanCtx                  = (ContextNetworkScan*)g_slice_new0 (ContextNetworkScan);
+    pNetworkScanCtx->uiCurrentStep   = NAS_NETWORK_SCAN_MONITOR_BEGIN;
+    pNetworkScanCtx->vpPrivateData   = (void*) gpstQMIContext;
+
+    nasCtx->bIsNetworkScanTaskStillRunning = TRUE;
+    nasCtx->bIsNeed2StopNetworkInfoCollection = FALSE;
+
+    task = g_task_new (NULL, NULL, NULL, NULL);
+    g_task_set_task_data (task, (gpointer)pNetworkScanCtx, (GDestroyNotify)cellular_hal_qmi_network_scan_data_collection_task_context_free);
+
+    CELLULAR_HAL_DBG_PRINT("%s - Network Scan Data Collection Task:0x%p\n",__FUNCTION__,task);
+    cellular_hal_qmi_network_scan_data_collection_step(task);
+
+    CELLULAR_HAL_DBG_PRINT("%s %d - Exit\n",__FUNCTION__,__LINE__);
+    
+    //Cleanup current thread when exit
+    pthread_exit(NULL);
+    
+    return RETURN_OK;
 }
 
 static int cellular_hal_qmi_network_scan_data_collection_task( void )
@@ -3279,22 +3313,8 @@ static int cellular_hal_qmi_network_scan_data_collection_task( void )
         {
             if( FALSE == nasCtx->bIsNetworkScanTaskStillRunning )
             {
-                ContextNetworkScan  *pNetworkScanCtx = NULL;
-                GTask               *task;
-
-                pNetworkScanCtx                  = (ContextNetworkScan*)g_slice_new0 (ContextNetworkScan);
-                pNetworkScanCtx->uiCurrentStep   = NAS_NETWORK_SCAN_MONITOR_BEGIN;
-                pNetworkScanCtx->vpPrivateData   = (void*) gpstQMIContext;
-                
-                nasCtx->bIsNetworkScanTaskStillRunning = TRUE;
-                nasCtx->cancellableForNetworkScanTask = g_cancellable_new ();
-
-                task = g_task_new (NULL, nasCtx->cancellableForNetworkScanTask, NULL, NULL);
-                g_task_set_task_data (task, (gpointer)pNetworkScanCtx, (GDestroyNotify)cellular_hal_qmi_network_scan_data_collection_task_context_free);
-
-                CELLULAR_HAL_DBG_PRINT("%s - Network Scan Data Collection Task:0x%p\n",__FUNCTION__,task);
-                g_task_run_in_thread(task,cellular_hal_qmi_network_scan_data_collection_thread);
-                
+                //Initiate the thread for cellular network scan 
+                pthread_create( &gloopThread, NULL, &cellular_hal_qmi_network_scan_start_thread, (void*)NULL);
                 return RETURN_OK;
             }
             else
