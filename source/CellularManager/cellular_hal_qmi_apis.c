@@ -4859,6 +4859,7 @@ static void cellular_hal_qmi_profile_operation_step( GTask *task )
         }
         case WDS_PROFILE_CREATE_VERIFY_AND_SET_LTE_PDN_ATTACH:
         {
+#if 0 //Don't perform attach opeartion..Modem takes care of it.
             if ( ( WDS_PROFILE_OPERATION_CREATE == pProfileCrCtx->enProfileOperationRequest ) ||
                  ( WDS_PROFILE_OPERATION_MODIFY == pProfileCrCtx->enProfileOperationRequest ) )
             {
@@ -4880,6 +4881,7 @@ static void cellular_hal_qmi_profile_operation_step( GTask *task )
                     }
                 }
             }
+#endif
         }
         case WDS_PROFILE_CREATE_NOTIFY:
         case WDS_PROFILE_DELETE_NOTIFY:
