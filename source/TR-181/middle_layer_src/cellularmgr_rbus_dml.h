@@ -40,10 +40,13 @@
  * code generated with: python ../scripts/rbus_code_generator_ccsp_style.py ../../../../../config/RdkCellularManager.xml cellularmgr
  */
 #ifdef RBUS_BUILD_FLAG_ENABLE
+#ifndef  _CELLULARMGR_RBUS_DML_H
+#define  _CELLULARMGR_RBUS_DML_H
 
 #include <rbus.h>
 
 rbusError_t cellularmgr_Init();
 rbusError_t cellularmgr_Unload();
 
+#endif /* _CELLULARMGR_RBUS_DML_H */
 #endif /*RBUS_BUILD_FLAG_ENABLE*/
