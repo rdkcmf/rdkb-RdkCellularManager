@@ -1587,13 +1587,11 @@ rbusError_t ContextProfile_Synchronize_rbus(void* ctx)
 
 int do_ContextProfile_IsUpdated_ContextProfile_Synchronize(HandlerContext context)
 {
-    if(IsTimeToSyncDynamicTable(context.fullName))
+    if(ContextProfile_IsUpdated_rbus(&context))
     {
-        if(ContextProfile_IsUpdated_rbus(&context))
-        {
-            return ContextProfile_Synchronize_rbus(&context);
-        }
+        return ContextProfile_Synchronize_rbus(&context);
     }
+        
     return 0;
 }
 
