@@ -2606,12 +2606,12 @@ rbusError_t Cellular_AccessPoint_Synchronize_rbus(void* ctx)
     ULONG AccessPointCurrentEntriesCount = pstDmlCellular->ulAccessPointNoOfEntries;
     CellularMgr_AccessPointGetProfileList( &(pstDmlCellular->pstAPInfo), (int*)&pstDmlCellular->ulAccessPointNoOfEntries);
 
-    if ((AccessPointCurrentEntriesCount != pstDmlCellular->ulAccessPointNoOfEntries) &&
-        (pstDmlCellular->pstAPInfo != NULL))
+    if ( pstDmlCellular->pstAPInfo != NULL )
     {
         for(int j = 0; j < pstDmlCellular->ulAccessPointNoOfEntries; j++)
         {
             CELLULAR_INTERFACE_ACCESSPOINT_INFO  *pstAPInfo = &(pstDmlCellular->pstAPInfo[j]);
+
             if (Sample_RegisterRow(CELLULARMGR_ACCESSPOINT_TABLE, (j+1), NULL, pstAPInfo) == RBUS_ERROR_SUCCESS)
             {
                 CcspTraceInfo(("%s-%d : Add AccessPoint Table:Inst(%s%d) \n", __FUNCTION__, __LINE__, CELLULARMGR_ACCESSPOINT_TABLE, (j+1)));
