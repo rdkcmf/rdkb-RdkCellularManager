@@ -337,8 +337,6 @@ typedef  struct
     gchar                           wwan_iface[16];
     gchar                           modem_device_name[16];
     gchar                           modem_device_path[32];
-    gchar                           net_driver[16];
-    gchar                           net_sysfs_path[32];
     guint8                          IsDeviceRemovedSignalReceived;
     ContextDMSInfo                  dmsCtx;                            //DMS context
     ContextNASInfo                  nasCtx;                            //NAS context
@@ -3079,6 +3077,7 @@ static void cellular_hal_qmi_monitor_get_serving_system (QmiClientNas *nasClient
             }
 
             pDeviceRegCtx->enNASRegistrationStatus = DEVICE_NAS_STATUS_REGISTERED;
+            nasCtx->enNASRegistrationStatus = DEVICE_NAS_STATUS_REGISTERED;
             pDeviceRegCtx->uiCurrentStep = NAS_MODEM_NOTIFY_REGISTRATION_STATUS;
 	        registration_state_previous = QMI_NAS_REGISTRATION_STATE_REGISTERED;
         }
@@ -3454,7 +3453,7 @@ static int cellular_hal_qmi_network_scan_data_collection_task( void )
     }
     else
     {
-        CELLULAR_HAL_DBG_PRINT("%s - QMI(%s) not ready so can't be collect network scan information\n", __FUNCTION__, gpstQMIContext->net_driver);
+        CELLULAR_HAL_DBG_PRINT("%s - QMI(%s) not ready so can't be collect network scan information\n", __FUNCTION__, gpstQMIContext->modem_device_name);
         return RETURN_ERROR;
     }
 }
@@ -3486,7 +3485,7 @@ int cellular_hal_qmi_get_available_networks_information(CellularNetworkScanResul
     }
     else
     {
-        CELLULAR_HAL_DBG_PRINT("%s - QMI(%s) not ready so can't be collect network scan information\n", __FUNCTION__, gpstQMIContext->net_driver);
+        CELLULAR_HAL_DBG_PRINT("%s - QMI(%s) not ready so can't be collect network scan information\n", __FUNCTION__, gpstQMIContext->modem_device_name);
         return RETURN_ERROR;
     }
 }
@@ -3785,7 +3784,7 @@ int cellular_hal_qmi_get_current_plmn_information(CellularCurrentPlmnInfoStruct 
     }
     else
     {
-        CELLULAR_HAL_DBG_PRINT("%s - QMI(%s) not ready so slot can't be query current plmn information\n", __FUNCTION__, gpstQMIContext->net_driver);
+        CELLULAR_HAL_DBG_PRINT("%s - QMI(%s) not ready so slot can't be query current plmn information\n", __FUNCTION__, gpstQMIContext->modem_device_name);
         return RETURN_ERROR;
     }
 }
