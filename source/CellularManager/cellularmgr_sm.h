@@ -68,6 +68,8 @@ CellularPolicySmState_t CellularMgrSMGetCurrentState( void );
 
 void CellularMgrSMSetCellularEnable( unsigned char bRDKEnable );
 
+unsigned char CellularMgrSMGetCellularEnable( void );
+
 int CellularMgrGetCurrentPDPContextStatusInformation( PCELLULAR_INTERFACE_CONTEXTPROFILE_INFO  pstContextProfileInfo );
 
 int cellular_get_serving_info(int *registration_status, int *roaming_status,  int *attach_status);

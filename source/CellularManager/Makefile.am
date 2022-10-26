@@ -32,7 +32,9 @@ cellularmanager_CPPFLAGS = -I$(top_srcdir)/source/TR-181/include                
         -I$(top_srcdir)/../hal/include                                                \
         -I$(top_srcdir)/../CcspCommonLibrary/source/cosa/include/                  \
         -I$(top_srcdir)/../CcspCommonLibrary/source/ccsp/components/include/       \
-        -I$(top_srcdir)/source/TR-181/middle_layer_src $(CPPFLAGS)
+        -I$(top_srcdir)/source/TR-181/middle_layer_src $(CPPFLAGS) \
+        -I${PKG_CONFIG_SYSROOT_DIR}$(includedir)/rbus \
+        -I${PKG_CONFIG_SYSROOT_DIR}$(includedir)/rtmessage
 
 cellularmanager_DEPENDENCIES= \
     $(EXTRA_DEPENDENCIES) \

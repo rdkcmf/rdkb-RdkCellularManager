@@ -23,6 +23,10 @@
 #include "cellularmgr_cellular_apis.h"
 #include "cellular_hal_qmi_apis.h"
 
+#if RBUS_BUILD_FLAG_ENABLE
+#include "cellularmgr_rbus_events.h"
+#endif
+
 /**********************************************************************
                 CONSTANT DEFINITIONS
 **********************************************************************/
@@ -196,9 +200,6 @@ int cellular_get_serving_info(int *registration_status, int *roaming_status,  in
     else {
         *attach_status = PROFILE_STATUS_ACTIVE;
     }
-    CcspTraceInfo(("%s - Registration_status - Status[%d]\n", __FUNCTION__,*registration_status));
-    CcspTraceInfo(("%s - Roaming_status - Status[%d]\n", __FUNCTION__,*roaming_status));
-    CcspTraceInfo(("%s - Attach status - Status[%d]\n", __FUNCTION__,*attach_status));
     pthread_mutex_unlock(&mutex);
 }
 
@@ -534,8 +535,6 @@ static CellularPolicySmState_t TransitionDeactivated( void )
 {
     CellularDeviceContextCBStruct stDeviceCtxCB = {0};
 
-    CcspTraceInfo(("%s %d - Entering \n", __FUNCTION__, __LINE__));
-
     //PhyStatus should be down
     CcspTraceInfo(("%s - Updating physical status to DOWN for this '%s' interface\n", __FUNCTION__, gpstCellularPolicyCtrl->acWANIfName));
     if ( CellularMgrUpdatePhyStatus (gpstCellularPolicyCtrl->acWANIfName, DEVICE_OPEN_STATUS_NOT_READY) != RETURN_OK)
@@ -562,8 +561,6 @@ static CellularPolicySmState_t TransitionDeactivated( void )
 
 static CellularPolicySmState_t TransitionDeregistered( void )
 {
-    CcspTraceInfo(("%s %d - Entering \n", __FUNCTION__, __LINE__));
-
     CcspTraceInfo(("%s - Updating Physical Status for '%s' device '%s' interface, Status[%d]\n", __FUNCTION__, gpstCellularPolicyCtrl->acDeviceName, gpstCellularPolicyCtrl->acWANIfName, gpstCellularPolicyCtrl->enDeviceOpenStatus ));
     if ( CellularMgrUpdatePhyStatus (gpstCellularPolicyCtrl->acWANIfName, gpstCellularPolicyCtrl->enDeviceOpenStatus) != RETURN_OK )
     {
@@ -583,8 +580,6 @@ static CellularPolicySmState_t TransitionDeregistered( void )
 
 static CellularPolicySmState_t TransitionRegistering( void )
 {
-    CcspTraceInfo(("%s %d - Entering \n", __FUNCTION__, __LINE__));
-
     //Validate Input
     if( NULL == gpstCellularPolicyCtrl )
     {
@@ -602,8 +597,6 @@ static CellularPolicySmState_t TransitionRegistering( void )
 
 static CellularPolicySmState_t TransitionRegistered( void )
 {
-    CcspTraceInfo(("%s %d - Entering \n", __FUNCTION__, __LINE__));
-
     gpstCellularPolicyCtrl->bIPv4NetworkStartInProgress         = FALSE;
     gpstCellularPolicyCtrl->bIPv6NetworkStartInProgress         = FALSE;
     gpstCellularPolicyCtrl->bIPv4WaitingForPacketStatus         = FALSE;
@@ -623,8 +616,6 @@ static CellularPolicySmState_t TransitionRegistered( void )
 static CellularPolicySmState_t TransitionRegisteredStartNetwork( void )
 {
     CellularNetworkCBStruct stNetworkCB = {0};
-
-    CcspTraceInfo(("%s %d - Entering \n", __FUNCTION__, __LINE__));
 
     //LinkStatus should be Up
     CcspTraceInfo(("%s - Updating link status to UP for this '%s' interface \n", __FUNCTION__, gpstCellularPolicyCtrl->acWANIfName));
@@ -681,7 +672,6 @@ static CellularPolicySmState_t TransitionRegisteredStartNetwork( void )
 
 static CellularPolicySmState_t TransitionConnected( void )
 {
-    CcspTraceInfo(("%s %d - Entering \n", __FUNCTION__, __LINE__));
     max_wait = 3;
 
     return CELLULAR_STATE_CONNECTED;
@@ -689,8 +679,6 @@ static CellularPolicySmState_t TransitionConnected( void )
 
 static CellularPolicySmState_t TransitionConnectedStopNetwork( void )
 {
-    CcspTraceInfo(("%s %d - Entering \n", __FUNCTION__, __LINE__));
-
     //LinkStatus should be down
     CcspTraceInfo(("%s - Updating link status to DOWN for this '%s' interface \n", __FUNCTION__, gpstCellularPolicyCtrl->acWANIfName));
     if ( CellularMgrUpdateLinkStatus (gpstCellularPolicyCtrl->acWANIfName, DOWN_STR) != RETURN_OK)
@@ -775,6 +763,41 @@ static CellularPolicySmState_t TransitionConnectedStopNetwork( void )
 }
 
 /* Cellular States */
+void CellularMgrSMCheckAndSetWWANConnectionStatus( CellularPolicySmState_t smState )
+{
+    unsigned char bPreviousPhyConnectedStatus = gpstCellularPolicyCtrl->pCmIfData->X_RDK_PhyConnectedStatus;
+    unsigned char bPreviousLinkAvailableStatus = gpstCellularPolicyCtrl->pCmIfData->X_RDK_LinkAvailableStatus;
+    CellularInterfaceStatus_t  PrevStatus = gpstCellularPolicyCtrl->pCmIfData->Status;
+
+    switch( smState )
+    {
+        case CELLULAR_STATE_DOWN:
+        case CELLULAR_STATE_DEACTIVATED:
+        case CELLULAR_STATE_DEREGISTERED:
+        case CELLULAR_STATUS_ERROR:
+            gpstCellularPolicyCtrl->pCmIfData->X_RDK_PhyConnectedStatus = FALSE;
+            gpstCellularPolicyCtrl->pCmIfData->X_RDK_LinkAvailableStatus = FALSE;
+            gpstCellularPolicyCtrl->pCmIfData->Status = IF_DOWN;
+        break;
+
+        case CELLULAR_STATE_REGISTERED:
+            gpstCellularPolicyCtrl->pCmIfData->X_RDK_PhyConnectedStatus = TRUE;
+            gpstCellularPolicyCtrl->pCmIfData->X_RDK_LinkAvailableStatus = FALSE;
+            gpstCellularPolicyCtrl->pCmIfData->Status = IF_UP;
+        break;
+
+        case CELLULAR_STATE_CONNECTED:
+            gpstCellularPolicyCtrl->pCmIfData->X_RDK_LinkAvailableStatus = TRUE;
+        break;
+    }
+
+#ifdef RBUS_BUILD_FLAG_ENABLE
+    CellularMgr_RBUS_Events_PublishInterfaceStatus(PrevStatus,gpstCellularPolicyCtrl->pCmIfData->Status);
+    CellularMgr_RBUS_Events_PublishPhyConnectionStatus(bPreviousPhyConnectedStatus,gpstCellularPolicyCtrl->pCmIfData->X_RDK_PhyConnectedStatus);
+    CellularMgr_RBUS_Events_PublishLinkAvailableStatus(bPreviousLinkAvailableStatus,gpstCellularPolicyCtrl->pCmIfData->X_RDK_LinkAvailableStatus);
+#endif
+}
+
 static void CellularMgrSMSetCurrentState( CellularPolicySmState_t smState)
 {
     gpstCellularPolicyCtrl->enCurrentSMState = smState;
@@ -788,6 +811,11 @@ CellularPolicySmState_t CellularMgrSMGetCurrentState( void )
 void CellularMgrSMSetCellularEnable( unsigned char bRDKEnable )
 {
     gpstCellularPolicyCtrl->bRDKEnable = bRDKEnable;
+}
+
+unsigned char CellularMgrSMGetCellularEnable( void )
+{
+    return (gpstCellularPolicyCtrl->bRDKEnable);
 }
 
 static CellularPolicySmState_t StateDown( void )
@@ -1132,6 +1160,7 @@ static void* CellularMgr_StateMachine_Thread( void *arg )
         {
            CcspTraceInfo(("%s %d - New state: %d ,Previous state :%d  \n", __FUNCTION__, __LINE__,policy_sm_state,policy_sm_state_old));
            policy_sm_state_old = policy_sm_state;
+           CellularMgrSMCheckAndSetWWANConnectionStatus( policy_sm_state );
         }
         switch (policy_sm_state)
         {

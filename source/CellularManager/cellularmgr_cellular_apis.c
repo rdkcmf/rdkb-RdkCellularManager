@@ -62,6 +62,9 @@
 #include "base64.h"
 #include "cellularmgr_cellular_webconfig_api.h"
 
+#if RBUS_BUILD_FLAG_ENABLE
+#include "cellularmgr_rbus_events.h"
+#endif
 /**********************************************************************
                 STRUCTURE AND CONSTANT DEFINITIONS
 **********************************************************************/
@@ -303,6 +306,9 @@ ANSC_STATUS DmlCellularInitialize ( ANSC_HANDLE  hDml )
     CellularContextInitInputStruct stCtxInputStruct = { 0 };
     CellularMgrSMInputStruct       stStateMachineInput = { 0 };
     INT                            iLoopCount;
+#if RBUS_BUILD_FLAG_ENABLE
+    pthread_t                      rBusThread;
+#endif
 
     if ( pMyObject == NULL )
     {
@@ -414,6 +420,11 @@ ANSC_STATUS DmlCellularInitialize ( ANSC_HANDLE  hDml )
     stStateMachineInput.pCmIfData = &(pMyObject->pstDmlCellular->pstInterfaceInfo[0]);
     memcpy(&(stStateMachineInput.stContextProfile), &(stCtxInputStruct.stIfInput), sizeof(CellularProfileStruct));
     CellularMgr_Start_State_Machine( &stStateMachineInput );
+
+#if RBUS_BUILD_FLAG_ENABLE
+    //Initiate the thread for Cellular RBUS On-Interval case
+    pthread_create( &rBusThread, NULL, &CellularMgr_RBUS_Events_Monitor_Thread, (void*)pMyObject);
+#endif
 
     CcspTraceInfo(("%s %d - Done\n",__FUNCTION__,__LINE__));
     
@@ -891,6 +902,11 @@ int CellularMgr_ServingSystemInfo( CELLULAR_INTERFACE_INFO  *pstInterfaceInfo, C
 }
 int CellularMgr_SetModemEnable( BOOLEAN bEnable )
 {
+#if RBUS_BUILD_FLAG_ENABLE
+    BOOLEAN bPrevEnable = CellularMgrSMGetCellularEnable( );
+    CellularMgr_RBUS_Events_Publish_X_RDK_Enable(bPrevEnable, bEnable);
+#endif
+
     CellularMgrSMSetCellularEnable(bEnable);
     return ( cellular_hal_set_modem_operating_configuration( ( TRUE == bEnable ) ?  CELLULAR_MODEM_SET_ONLINE : CELLULAR_MODEM_SET_OFFLINE ));
 }

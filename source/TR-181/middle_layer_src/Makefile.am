@@ -32,5 +32,5 @@ libcellularmanager_middle_layer_src_la_SOURCES =  cellularmgr_plugin_main.c  cel
 libcellularmanager_middle_layer_src_la_LDFLAGS = -lccsp_common -lrdkloggers $(DBUS_LIBS) $(SYSTEMD_LDFLAGS) -lnanomsg -lsysevent -lmsgpackc -lcurl -lwebconfig_framework -ltrower-base64
 
 libcellularmanager_middle_layer_src_la_CPPFLAGS += -I${PKG_CONFIG_SYSROOT_DIR}$(includedir)/rbus -I${PKG_CONFIG_SYSROOT_DIR}$(includedir)/rtmessage
-libcellularmanager_middle_layer_src_la_SOURCES += cellularmgr_rbus_helpers.c cellularmgr_rbus_dml.c
+libcellularmanager_middle_layer_src_la_SOURCES += cellularmgr_rbus_events.c cellularmgr_rbus_helpers.c cellularmgr_rbus_dml.c
 libcellularmanager_middle_layer_src_la_LDFLAGS += -lrbus -lrtMessage -lmsgpackc

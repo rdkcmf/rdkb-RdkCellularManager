@@ -43,6 +43,7 @@
 
 #include <rbus.h>
 #include <cellularmgr_rbus_helpers.h>
+#include <cellularmgr_rbus_events.h>
 #include <rtMemory.h>
 #include <rtLog.h>
 #include <stdlib.h>
@@ -58,44 +59,18 @@
 #define  ARRAY_SZ(x) (sizeof(x) / sizeof((x)[0]))
 
 extern PBACKEND_MANAGER_OBJECT               g_pBEManager;
-
-typedef enum _CellularMGR_EnumToString{
-    ENUM_RADIOENVCONDITIONS = 1
-}CellularMGR_EnumToString;
+extern CellularMGR_rbusSubListSt gRBUSSubListSt;
 
 rbusHandle_t gBusHandle = NULL;
 char const gComponentID[] = "cellularmgr";
-char componentName[32] = "CELLULARMANAGER";
-
-int gRadioEnvConditionsSub = 0;
 
 #define CELLULARMGR_INFACE_TABLE                 "Device.Cellular.Interface."
 #define CELLULARMGR_INFACE_CONTXTPROFILE_TABLE   "Device.Cellular.Interface.%d.X_RDK_ContextProfile."
 #define CELLULARMGR_ACCESSPOINT_TABLE            "Device.Cellular.AccessPoint."
 #define CELLULARMGR_UICC_TABLE                   "Device.Cellular.X_RDK_Uicc."
 #define PLMNACCESS_AVAILABLENETWORK_TABLE        "Device.Cellular.Interface.%d.X_RDK_PlmnAccess.AvailableNetworks."
-#define CELLULARMGR_INFACE_RADIOSIGNAL_RADIOENVCONDITIONS                  "Device.Cellular.Interface.{i}.X_RDK_RadioSignal.RadioEnvConditions"
 
 rbusError_t registerGeneratedDataElements(rbusHandle_t handle);
-ANSC_STATUS CellularMgr_Rbus_String_EventPublish_OnValueChange(char *dm_event, void *prev_dm_value, void *dm_value);
-
-static void CellularMgr_EnumToString(CELLULAR_RADIO_ENV_CONDITIONS Enum, CellularMGR_EnumToString EnumType, char* String)
-{
-    char *Ptr = NULL;
-
-    if (EnumType == ENUM_RADIOENVCONDITIONS)
-    {
-        Ptr = ((Enum == RADIO_ENV_CONDITION_EXCELLENT)? "EXCELLENT":
-               ((Enum == RADIO_ENV_CONDITION_GOOD)? "GOOD":
-               ((Enum == RADIO_ENV_CONDITION_FAIR)? "FAIR":
-               ((Enum == RADIO_ENV_CONDITION_POOR)? "POOR":"UNAVAILABLE"))));
-    }
-
-    if (Ptr != NULL)
-    {
-        AnscCopyString(String , Ptr);
-    }
-}
 
 rbusError_t Sample_RegisterRow(char const* tableName, uint32_t instNum, char const* alias, void* context)
 {
@@ -830,28 +805,6 @@ rbusError_t Cellular_Interface_SetParamBoolValue_rbus(rbusHandle_t handle, rbusP
         pstInterfaceInfo->Upstream = val;
         /*context.userData is this objects data and val is the property's new value*/
     }
-    else if(strcmp(context.name, "X_RDK_PhyConnectedStatus") == 0)
-    {
-        bool val;
-
-        rbusValueError_t verr = rbusProperty_GetBooleanEx(property, &val);
-        if(verr != RBUS_VALUE_ERROR_SUCCESS)
-            return RBUS_ERROR_INVALID_INPUT;
-
-        pstInterfaceInfo->X_RDK_PhyConnectedStatus = val;
-        /*context.userData is this objects data and val is the property's new value*/
-    }
-    else if(strcmp(context.name, "X_RDK_LinkAvailableStatus") == 0)
-    {
-        bool val;
-
-        rbusValueError_t verr = rbusProperty_GetBooleanEx(property, &val);
-        if(verr != RBUS_VALUE_ERROR_SUCCESS)
-            return RBUS_ERROR_INVALID_INPUT;
-
-         pstInterfaceInfo->X_RDK_LinkAvailableStatus = val;
-        /*context.userData is this objects data and val is the property's new value*/
-    }
     else
     {
         return RBUS_ERROR_INVALID_INPUT;
@@ -1358,7 +1311,8 @@ static rbusError_t RadioSignal_GetParamIntValue_rbus(rbusHandle_t handle, rbusPr
         return RBUS_ERROR_BUS_ERROR;
     }
 
-    PCELLULAR_INTERFACE_SERVING_INFO    pstServingInfo   = &(pstInterfaceInfo->stServingInfo);
+    PCELLULAR_INTERFACE_SERVING_INFO    pstServingInfo       = &(pstInterfaceInfo->stServingInfo);
+
     if (pstServingInfo == NULL)
     {
         return RBUS_ERROR_BUS_ERROR;
@@ -1475,8 +1429,6 @@ static rbusError_t RadioSignal_GetParamStringValue_rbus(rbusHandle_t handle, rbu
     }
     else if(strcmp(context.name, "RadioEnvConditions") == 0)
     {
-        CELLULAR_RADIO_ENV_CONDITIONS enPrevValue = pstInterfaceInfo->RadioEnvConditions;
-
         pstInterfaceInfo->RadioEnvConditions = CellularMgr_GetRadioEnvConditions( );
         if (pstInterfaceInfo->RadioEnvConditions == RADIO_ENV_CONDITION_EXCELLENT)
         {
@@ -1501,19 +1453,6 @@ static rbusError_t RadioSignal_GetParamStringValue_rbus(rbusHandle_t handle, rbu
         else
         {
             rbusProperty_SetString(property, "None");
-        }
-
-        //When it is changing we need to publish if subscribed by others
-        if( ( gRadioEnvConditionsSub ) && ( enPrevValue != pstInterfaceInfo->RadioEnvConditions ) )
-        {
-            char acTmpPrevValue[32] = {0},
-                 acTmpCurValue[32]  = {0};
-
-            CellularMgr_EnumToString(enPrevValue,ENUM_RADIOENVCONDITIONS,acTmpPrevValue);
-            CellularMgr_EnumToString(pstInterfaceInfo->RadioEnvConditions,ENUM_RADIOENVCONDITIONS,acTmpCurValue);
-
-            CcspTraceError(("%s-%d: Publish DM(%s) Prev(%s) Current(%s)\n",__FUNCTION__, __LINE__, context.fullName,acTmpPrevValue,acTmpCurValue));
-            CellularMgr_Rbus_String_EventPublish_OnValueChange(context.fullName, acTmpPrevValue, acTmpCurValue);
         }
     }
     else
@@ -3205,103 +3144,12 @@ rbusError_t Cellular_AccessPoint_SetParamStringValue_rbus(rbusHandle_t handle, r
     return RBUS_ERROR_SUCCESS;
 }
 
-/***********************************************************************
-  Event subscribe handler API for objects:
- ***********************************************************************/
-rbusError_t CellularMgrDmlPublishEventHandler(rbusHandle_t handle, rbusEventSubAction_t action, const char* eventName, rbusFilter_t filter, int32_t interval, bool* autoPublish)
-{
-    char *subscribe_action = NULL;
-    UINT index = 0;
-
-    CcspTraceInfo(("%s %d - Event %s has been subscribed from subscribed\n", __FUNCTION__, __LINE__,eventName ));
-    subscribe_action = action == RBUS_EVENT_ACTION_SUBSCRIBE ? "subscribe" : "unsubscribe";
-    CcspTraceInfo(("%s %d - action=%s \n", __FUNCTION__, __LINE__, subscribe_action ));
-
-    if(eventName == NULL)
-    {
-        CcspTraceInfo(("%s %d - Property get name is NULL\n", __FUNCTION__, __LINE__));
-        return RBUS_ERROR_BUS_ERROR;
-    }
-
-    sscanf(eventName, "Device.Cellular.Interface.%d.", &index);
-
-    if(strstr(eventName, ".X_RDK_RadioSignal.RadioEnvConditions"))
-    {
-        if (action == RBUS_EVENT_ACTION_SUBSCRIBE)
-        {
-            gRadioEnvConditionsSub++;
-            CcspTraceInfo(("%s-%d : RadioEnvConditions Sub(%d) \n", __FUNCTION__, __LINE__, gRadioEnvConditionsSub));
-        }
-        else
-        {
-            if (gRadioEnvConditionsSub)
-                gRadioEnvConditionsSub--;
-            CcspTraceInfo(("%s-%d : RadioEnvConditions UnSub(%d) \n", __FUNCTION__, __LINE__, gRadioEnvConditionsSub));
-        }
-    }
-
-    return RBUS_ERROR_SUCCESS;
-}
-
-/****************************************************************************************************************
-  CellularMgr_Rbus_String_EventPublish_OnValueChange(): publish rbus events on value change
- ****************************************************************************************************************/
-ANSC_STATUS CellularMgr_Rbus_String_EventPublish_OnValueChange(char *dm_event, void *prev_dm_value, void *dm_value)
-{
-    rbusEvent_t event;
-    rbusObject_t rdata;
-    rbusValue_t Value, preValue, byVal;
-    int rc = ANSC_STATUS_FAILURE;
-
-    if(dm_event == NULL || dm_value == NULL)
-    {
-        CcspTraceInfo(("%s %d - Failed publishing\n", __FUNCTION__, __LINE__));
-        return rc;
-    }
-
-    rbusValue_Init(&Value);
-    rbusValue_SetString(Value, (char*)dm_value);
-
-    rbusValue_Init(&preValue);
-    rbusValue_SetString(preValue, (char*)prev_dm_value);
-
-    rbusValue_Init(&byVal);
-    rbusValue_SetString(byVal, componentName);
-
-    rbusObject_Init(&rdata, NULL);
-    rbusObject_SetValue(rdata, "value", Value);
-    rbusObject_SetValue(rdata, "oldValue", preValue);
-    rbusObject_SetValue(rdata, "by", byVal);
-
-    event.name = dm_event;
-    event.data = rdata;
-    event.type = RBUS_EVENT_VALUE_CHANGED;
-
-    CcspTraceInfo(("%s %d - dm_event[%s],prev_dm_value[%s],dm_value[%s]\n", __FUNCTION__, __LINE__, dm_event, prev_dm_value, dm_value));
-
-    if(rbusEvent_Publish(gBusHandle, &event) != RBUS_ERROR_SUCCESS)
-    {
-        CcspTraceInfo(("%s %d - event publishing failed for type\n", __FUNCTION__, __LINE__));
-    }
-    else
-    {
-        CcspTraceInfo(("%s %d - Successfully Published event for event %s \n", __FUNCTION__, __LINE__, dm_event));
-        rc = ANSC_STATUS_SUCCESS;
-    }
-
-    rbusValue_Release(Value);
-    rbusValue_Release(preValue);
-    rbusValue_Release(byVal);
-    rbusObject_Release(rdata);
-    return rc;
-}
-
 rbusError_t registerGeneratedDataElements(rbusHandle_t handle)
 {
     rbusError_t rc;
     static rbusDataElement_t dataElements[] = {
-        {"Device.Cellular.X_RDK_Enable", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_GetParamBoolValue_rbus, Cellular_SetParamBoolValue_rbus, NULL, NULL, NULL, NULL}},
-        {"Device.Cellular.X_RDK_Status", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
+        {"Device.Cellular.X_RDK_Enable", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_GetParamBoolValue_rbus, Cellular_SetParamBoolValue_rbus, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
+        {"Device.Cellular.X_RDK_Status", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_GetParamStringValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
         {"Device.Cellular.X_RDK_Model", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.X_RDK_HardwareRevision", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.X_RDK_Vendor", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
@@ -3318,15 +3166,15 @@ rbusError_t registerGeneratedDataElements(rbusHandle_t handle)
         {"Device.Cellular.InterfaceNumberOfEntries", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetEntryCount_rbus, NULL, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.", RBUS_ELEMENT_TYPE_TABLE, {NULL, NULL, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.Enable", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamBoolValue_rbus, Cellular_Interface_SetParamBoolValue_rbus, NULL, NULL, NULL, NULL}}, 
-        {"Device.Cellular.Interface.{i}.Status", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
+        {"Device.Cellular.Interface.{i}.Status", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
         {"Device.Cellular.Interface.{i}.Alias", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.Name", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.LastChange", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamUlongValue_rbus, NULL, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.LowerLayers", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, Cellular_Interface_SetParamStringValue_rbus, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.Upstream", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamBoolValue_rbus, Cellular_Interface_SetParamBoolValue_rbus, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.X_RDK_RegisteredService", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
-	{"Device.Cellular.Interface.{i}.X_RDK_PhyConnectedStatus", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamBoolValue_rbus, Cellular_Interface_SetParamBoolValue_rbus, NULL, NULL, NULL, NULL}},
-        {"Device.Cellular.Interface.{i}.X_RDK_LinkAvailableStatus", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamBoolValue_rbus, Cellular_Interface_SetParamBoolValue_rbus, NULL, NULL, NULL, NULL}},
+	    {"Device.Cellular.Interface.{i}.X_RDK_PhyConnectedStatus", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamBoolValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
+        {"Device.Cellular.Interface.{i}.X_RDK_LinkAvailableStatus", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamBoolValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
         {"Device.Cellular.Interface.{i}.RegistrationRetries", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamUlongValue_rbus, Cellular_Interface_SetParamUlongValue_rbus, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.MaxRegistrationRetries", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamUlongValue_rbus, Cellular_Interface_SetParamUlongValue_rbus, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.RegistrationRetryTimer", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamUlongValue_rbus, Cellular_Interface_SetParamUlongValue_rbus, NULL, NULL, NULL, NULL}},
@@ -3361,11 +3209,11 @@ rbusError_t registerGeneratedDataElements(rbusHandle_t handle)
         {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.Rfcn", RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamUlongValue_rbus, NULL, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.PlmnId", RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.AreaCode", RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
-        {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.Rssi", RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamIntValue_rbus, NULL, NULL, NULL, NULL, NULL}},
-        {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.Snr", RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamIntValue_rbus, NULL, NULL, NULL, NULL, NULL}},
-        {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.Rsrp", RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamIntValue_rbus, NULL, NULL, NULL, NULL, NULL}},
-        {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.Rsrq", RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamIntValue_rbus, NULL, NULL, NULL, NULL, NULL}},
-        {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.Trx", RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamIntValue_rbus, NULL, NULL, NULL, NULL, NULL}},
+        {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.Rssi", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamIntValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
+        {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.Snr", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamIntValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
+        {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.Rsrp", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamIntValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
+        {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.Rsrq", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamIntValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
+        {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.Trx", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamIntValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
         {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.RadioEnvConditions", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamStringValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
 
         {"Device.Cellular.Interface.{i}.X_RDK_NeighborCellNumberOfEntries", RBUS_ELEMENT_TYPE_PROPERTY, {NeighborCell_GetEntryCount_rbus, NULL, NULL, NULL, NULL, NULL}},

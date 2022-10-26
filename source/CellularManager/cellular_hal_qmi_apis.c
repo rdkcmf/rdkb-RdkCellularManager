@@ -909,8 +909,6 @@ static void cellular_hal_qmi_get_network_signal_information_cb (QmiClientNas *na
         return;
     }
 
-    CELLULAR_HAL_DBG_PRINT("%s Successfully got signal info\n",__FUNCTION__);
-
     /* LTE... */
     nasCtx->lte_rssi = 0;
     nasCtx->lte_rsrq = 0;
@@ -999,14 +997,6 @@ int cellular_hal_qmi_get_network_signal_information(CellularSignalInfoStruct *si
                     signal_info->RSRP = nasCtx->lte_rsrp;
                     signal_info->SNR  = nasCtx->lte_snr;
                     signal_info->TXPower = nasCtx->tx_power;
-
-                    CELLULAR_HAL_DBG_PRINT("%s Signal Info Collection Done. RSSI:%d RSRQ:%d RSRP:%d SNR:%d TX_POWER:%d\n",
-                                                                            __FUNCTION__,
-                                                                            signal_info->RSSI,
-                                                                            signal_info->RSRQ,
-                                                                            signal_info->RSRP,
-                                                                            signal_info->SNR,
-                                                                            signal_info->TXPower);
                     break;
                 }
 
