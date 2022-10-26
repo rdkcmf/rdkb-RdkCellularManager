@@ -24,6 +24,7 @@
 
 #include "cellular_hal_qmi_apis.h"
 #include <unistd.h>
+#include "secure_wrapper.h"
 
 /**********************************************************************
                 CONSTANT DEFINITIONS
@@ -231,7 +232,7 @@ typedef struct
     gchar                           ICCID[CELLULAR_QMI_ICCID_MAX_LENGTH];
     gchar                           MSISDN[20];
     gchar                           FirmwareRevision[128];
-    gchar                           FirmwareVersion[26];
+    gchar                           FirmwareVersion[128];
 
 } ContextDMSInfo;
 
@@ -1284,6 +1285,40 @@ NEXTSTEP:
     cellular_hal_qmi_device_open_step(task);
 }
 
+#ifdef _WNXL11BWL_PRODUCT_REQ_
+static int cellular_hal_qmi_get_software_version_via_ATCmd( char *pOutput, int iOutputSize )
+{
+    FILE   *FilePtr            = NULL;
+    char   bufContent[ 512 ]  = { 0 };
+
+    if ( ( NULL == pOutput ) || ( 0 == iOutputSize ) )
+    {
+        return -1;
+    }
+
+    FilePtr = v_secure_popen( "r", "echo -e \"AT+QGMR\r\" | microcom -t 100 /dev/ttyUSB3 | tail +2 | head -n 1" );
+    if (FilePtr == NULL)
+    {
+        return -1;
+    }
+
+    char *pos;
+
+    fgets( bufContent, 512, FilePtr );
+    // Remove line \n charecter from string
+    if ( ( pos = strchr( bufContent, '\n' ) ) != NULL )
+    {
+        *pos = '\0';
+    }
+
+    snprintf( pOutput, iOutputSize, "%s", bufContent );
+    v_secure_pclose( FilePtr );
+    FilePtr = NULL;
+
+    return 0;
+}
+#endif
+
 static void cellular_hal_qmi_device_open_step( GTask *task )
 {
     QMIContextStructPrivate   *pstQMIContext  = NULL;
@@ -1367,6 +1402,12 @@ static void cellular_hal_qmi_device_open_step( GTask *task )
         {
             ContextDMSInfo  *dmsCtx  = &(pstQMIContext->dmsCtx);
 
+//Needs to get firmware version via AT commands since QMI not providing full version information for quectel
+#ifdef _WNXL11BWL_PRODUCT_REQ_
+            cellular_hal_qmi_get_software_version_via_ATCmd( dmsCtx->FirmwareVersion, sizeof(dmsCtx->FirmwareVersion) );
+            pDeviceOpenCtx->uiCurrentStep++;
+            /* fall through */
+#else
             qmi_client_dms_get_software_version (QMI_CLIENT_DMS(dmsCtx->dmsClient),
                                                  NULL,
                                                  10,
@@ -1374,6 +1415,7 @@ static void cellular_hal_qmi_device_open_step( GTask *task )
                                                  (GAsyncReadyCallback)cellular_hal_qmi_get_software_version,
                                                  task);
             return;
+#endif
         }
         case MODEM_OPEN_STATE_GET_IMEI:
         {

@@ -116,12 +116,12 @@
                     <parameters>
                         <parameter>
                             <name>CurrentImageVersion</name>
-                            <type>string(26)</type>
+                            <type>string(128)</type>
                             <syntax>string</syntax>
                         </parameter>
                         <parameter>
                             <name>FallbackImageVersion</name>
-                            <type>string(26)</type>
+                            <type>string(128)</type>
                             <syntax>string</syntax>
                         </parameter>
                     </parameters>

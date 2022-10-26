@@ -361,8 +361,8 @@ _CELLULAR_DML_INFO
     CHAR                                   X_RDK_Model[20];
     CHAR                                   X_RDK_HardwareRevision[20];
     CHAR                                   X_RDK_Vendor[20];
-    CHAR                                   CurrentImageVersion[26];
-    CHAR                                   FallbackImageVersion[26];
+    CHAR                                   CurrentImageVersion[128];
+    CHAR                                   FallbackImageVersion[128];
     CHAR                                   X_RDK_ControlInterface[10];
     CELLULAR_CONTROL_INTERFACE_STATUS      X_RDK_ControlInterfaceStatus;
     CHAR                                   X_RDK_DataInterface[10];
