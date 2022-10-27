@@ -33,4 +33,4 @@ libcellularmanager_middle_layer_src_la_LDFLAGS = -lccsp_common -lrdkloggers $(DB
 
 libcellularmanager_middle_layer_src_la_CPPFLAGS += -I${PKG_CONFIG_SYSROOT_DIR}$(includedir)/rbus -I${PKG_CONFIG_SYSROOT_DIR}$(includedir)/rtmessage
 libcellularmanager_middle_layer_src_la_SOURCES += cellularmgr_rbus_helpers.c cellularmgr_rbus_dml.c
-libcellularmanager_middle_layer_src_la_LDFLAGS += -lrbus -lrbus-core -lrtMessage -lmsgpackc
+libcellularmanager_middle_layer_src_la_LDFLAGS += -lrbus -lrtMessage -lmsgpackc
