@@ -90,5 +90,8 @@ int cellular_hal_qmi_set_modem_network_operation( NASAttachDetachOperation_t net
 int cellular_hal_qmi_get_modem_firmware_version(char *firmware_version);
 int cellular_hal_qmi_get_current_plmn_information(CellularCurrentPlmnInfoStruct *plmn_info);
 int cellular_hal_qmi_get_available_networks_information(CellularNetworkScanResultInfoStruct **network_info, unsigned int *total_network_count);
-
+int cellular_hal_qmi_get_supported_radio_technology(char *supported_rat);
+int cellular_hal_qmi_get_preferred_radio_technology( char *preferred_rat);
+int cellular_hal_qmi_set_preferred_radio_technology( char *preferred_rat);
+int cellular_hal_qmi_get_current_radio_technology( char *current_rat);
 #endif //_CELLULAR_HAL_QMI_APIS_H_

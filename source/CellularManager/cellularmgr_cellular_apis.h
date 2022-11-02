@@ -340,7 +340,7 @@ _CELLULAR_INTERFACE_INFO
     CHAR                                        Imei[16];
     CHAR                                        Iccid[CELLULAR_ICCID_MAX_LENGTH];
     CHAR                                        SupportedAccessTechnologies[256];
-    CHAR                                        PreferedAccessTechnologies[256];
+    CHAR                                        PreferredAccessTechnologies[256];
     CHAR                                        CurrentAccessTechnology[256];
     CELLULAR_PLMNACCESS_INFO                    stPlmnAccessInfo;
     CELLULAR_INTERFACE_SERVING_INFO             stServingInfo;
@@ -441,5 +441,13 @@ int CellularMgr_GetPlmnInformation( PCELLULAR_PLMNACCESS_INFO pstPlmnAccessInfo)
 int CellularMgr_GetAvailableNetworksInformation( PCELLULAR_PLMN_AVAILABLENETWORK_INFO *ppAvailableNetworkInfo, unsigned int *puiTotalCount );
 
 BOOL CellularMgr_BlobUnpack(char* blob);
+
+int CellularMgr_GetModemSupportedRadioTechnology( char *pSupportedRAT );
+
+int CellularMgr_GetModemPreferredRadioTechnology( char *pPreferredRAT );
+
+int CellularMgr_SetModemPreferredRadioTechnology( char *pPreferredRAT );
+
+int CellularMgr_GetModemCurrentRadioTechnology( char *pCurrentRAT );
 
 #endif //_CELLULARMGR_CELLULAR_APIS_H_

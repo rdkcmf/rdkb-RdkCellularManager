@@ -449,3 +449,50 @@ int cellular_hal_get_available_networks_information(CellularNetworkScanResultInf
 
     return RETURN_OK; 
 }
+
+int cellular_hal_get_modem_preferred_radio_technology( char *preferred_rat )
+{
+
+#ifdef QMI_SUPPORT
+    //Get Device preferred Radio Technology
+    cellular_hal_qmi_get_preferred_radio_technology(preferred_rat);
+#endif
+
+    return RETURN_OK;
+}
+
+int cellular_hal_set_modem_preferred_radio_technology( char *preferred_rat )
+{
+
+#ifdef QMI_SUPPORT
+    //Set Device preferred Radio Technology
+    if( RETURN_OK != cellular_hal_qmi_set_preferred_radio_technology(preferred_rat) )
+    {
+        return RETURN_ERROR;
+    }
+#endif
+
+    return RETURN_OK;
+}
+
+int cellular_hal_get_modem_current_radio_technology( char *current_rat )
+{
+
+#ifdef QMI_SUPPORT
+    //Get Device current Radio Technology
+    cellular_hal_qmi_get_current_radio_technology(current_rat);
+#endif
+
+    return RETURN_OK;
+}
+
+int cellular_hal_get_modem_supported_radio_technology( char *supported_rat )
+{
+
+#ifdef QMI_SUPPORT
+    //Get Device DMS parameters
+    cellular_hal_qmi_get_supported_radio_technology( supported_rat );
+#endif
+
+    return RETURN_OK;
+}

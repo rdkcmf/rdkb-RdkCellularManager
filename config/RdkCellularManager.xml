@@ -226,9 +226,10 @@
                                 <syntax>string</syntax>
                             </parameter>
                             <parameter>
-                                <name>PreferedAccessTechnologies</name>
-                                <type>string</type>
+                                <name>PreferredAccessTechnologies</name>
+                                <type>string(64)</type>
                                 <syntax>string</syntax>
+                                <writable>true</writable>
                             </parameter>
                             <parameter>
                                 <name>CurrentAccessTechnology</name>

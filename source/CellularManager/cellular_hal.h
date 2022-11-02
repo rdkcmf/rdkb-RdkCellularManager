@@ -863,4 +863,58 @@ int cellular_hal_get_current_plmn_information(CellularCurrentPlmnInfoStruct *plm
 */
 int cellular_hal_get_available_networks_information(CellularNetworkScanResultInfoStruct **network_info, unsigned int *total_network_count);
 
+/* cellular_hal_get_modem_preferred_radio_technology() function */
+/**
+* @description - Returns Modem preferred Radio Technologies
+*
+* @param[out] param_rat - Contains preferred technology.
+*
+* @return The status of the operation
+* @retval RETURN_OK if successful
+* @retval RETURN_ERR if any error is detected
+*
+*/
+int cellular_hal_get_modem_preferred_radio_technology( char *preferred_rat );
+
+/* cellular_hal_set_modem_preferred_radio_technology() function */
+/**
+* @description - sets Modem preferred Radio Technologies
+*
+* @param[in] param_rat - Contains preferred technology.Should be part of  supported RAT otherwise AUTO will be set
+*
+* @return The status of the operation
+* @retval RETURN_OK if successful
+* @retval RETURN_ERR if any error is detected
+*
+*/
+int cellular_hal_set_modem_preferred_radio_technology( char *preferred_rat );
+
+
+/* cellular_hal_get_modem_current_radio_technology() function */
+/**
+* @description - Returns Modem current Radio Technologies
+*
+* @param[out] param_rat - Contains current technology used for data.
+*
+* @return The status of the operation
+* @retval RETURN_OK if successful
+* @retval RETURN_ERR if any error is detected
+*
+*/
+int cellular_hal_get_modem_current_radio_technology( char *current_rat );
+
+/* cellular_hal_get_modem_supported_radio_technology() function */
+/**
+* @description - Returns Modem supported Radio access Technologies 
+*
+* @param[out] param_value - Contains information about supported RAT. 
+*
+* @return The status of the operation
+* @retval RETURN_OK if successful
+* @retval RETURN_ERR if any error is detected
+*
+*/
+
+int cellular_hal_get_modem_supported_radio_technology ( char *supported_rat );
+
 #endif //_CELLULAR_HAL_H_

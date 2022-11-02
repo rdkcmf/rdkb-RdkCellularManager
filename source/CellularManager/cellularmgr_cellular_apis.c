@@ -1104,6 +1104,33 @@ int CellularMgr_GetAvailableNetworksInformation( PCELLULAR_PLMN_AVAILABLENETWORK
     return RETURN_OK;
 }
 
+int CellularMgr_GetModemSupportedRadioTechnology( char *pSupportedRAT )
+{
+    return ( cellular_hal_get_modem_supported_radio_technology(pSupportedRAT));
+}
+
+int CellularMgr_GetModemPreferredRadioTechnology( char *pPreferredRAT )
+{
+    return ( cellular_hal_get_modem_preferred_radio_technology( pPreferredRAT ));
+}
+
+int CellularMgr_SetModemPreferredRadioTechnology( char *pPreferredRAT )
+{
+    //Allow LTE and AUTO mode only 
+    if ((pPreferredRAT != NULL) && ((strcmp (pPreferredRAT,"LTE") == 0) || (strcmp(pPreferredRAT,"AUTO") == 0)))
+    {
+       return ( cellular_hal_set_modem_preferred_radio_technology( pPreferredRAT ));
+    }
+    else 
+       return RETURN_ERROR;
+
+}
+
+int CellularMgr_GetModemCurrentRadioTechnology( char *pCurrentRAT )
+{
+    return ( cellular_hal_get_modem_current_radio_technology(pCurrentRAT ));
+}
+
 BOOL CellularMgr_BlobUnpack(char* blob)
 {
     CcspTraceInfo(("CellularMgr_BlobUnpack Function\n"));
@@ -1253,3 +1280,4 @@ BOOL CellularMgr_BlobUnpack(char* blob)
     }
     return TRUE;
 }
+

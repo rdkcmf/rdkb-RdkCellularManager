@@ -44,6 +44,7 @@
 #define  CELLULAR_QMI_GETREG_STATUS_VIA_DML_MAX_WAITIME         ( 10 )
 #define  CELLULAR_QMI_GETNETWORK_VIA_DML_MAX_WAITIME            ( 10 )
 #define  CELLULAR_QMI_GETNETWORK_VIA_DML_MAX_TTL                ( 60 )
+#define  CELLULAR_QMI_GET_CAPS_MAX_WAITIME                      ( 10 )
 
 #define  CELLULAR_QMI_ICCID_MAX_LENGTH                          ( 21 )
 #define  CELLULAR_QMI_OPERATOR_LENGTH                           ( 32 )
@@ -196,6 +197,7 @@ typedef enum {
     WDS_NW_START_REGISTER_EVENTS,
     WDS_NW_START_START_NETWORK,
     WDS_NW_START_GET_LEASE_SETTINGS,
+    WDS_NW_START_GET_DATA_RAT,
     WDS_NW_START_END
 } WDSNWStartState_t;
 
@@ -233,6 +235,7 @@ typedef struct
     gchar                           MSISDN[20];
     gchar                           FirmwareRevision[128];
     gchar                           FirmwareVersion[128];
+    gchar                           SupportedRAT[128];
 
 } ContextDMSInfo;
 
@@ -268,6 +271,7 @@ typedef struct
     unsigned long                   LastCollectedTimeForPlmnInfo;
     CellularCurrentPlmnInfoStruct   stPlmnInfo;
     gchar                           operator_name[CELLULAR_QMI_OPERATOR_LENGTH];
+    gchar                           preferredRAT[128];
 
 } ContextNASInfo;
 
@@ -325,6 +329,7 @@ typedef struct
     CellularPacketStatsStruct       stPacketStats;
     guint32                         last_packet_stats_updated_time;
     guint8                          IsPacketStatsCollectionDone;
+    gchar                           currentRAT[128];
 
 } ContextWDSInfo;
 
@@ -375,6 +380,11 @@ typedef struct {
     guint                            IsQueryDone;
     void*                            vpPrivateData;  
 } ContextGetIDs;
+
+typedef struct {
+    guint                            IsQueryDone;
+    void*                            vpPrivateData;
+} ContextNASQuery;
 
 typedef enum {
     WDS_NW_PACKET_STATS_BEGIN                  = 1,
@@ -2174,6 +2184,126 @@ int cellular_hal_qmi_get_msisdn_information( char *msisdn )
         return RETURN_ERROR;
     }
 }
+static void
+cellular_hal_qmi_get_capabilities_cb (QmiClientDms *client,
+                        GAsyncResult *res,
+			gpointer user_data )
+{
+    QmiMessageDmsGetCapabilitiesOutput *output;
+    GArray *radio_interface_list;
+    GError *error = NULL;
+    GString *networks;
+    char *interface_str;
+    guint i;
+    ContextDMSInfo *dmsCtx  = (ContextDMSInfo*)user_data;
+    output = qmi_client_dms_get_capabilities_finish (client, res, &error);
+    if (!output) {
+	CELLULAR_HAL_DBG_PRINT("%s - error: operation failed %s\n", __FUNCTION__,error->message);
+        g_error_free (error);
+        return;
+    }
+    if (!qmi_message_dms_get_capabilities_output_get_result (output, &error)) {
+	CELLULAR_HAL_DBG_PRINT("%s - error: couldn't get capabilities %s\n", __FUNCTION__,error->message);
+        g_error_free (error);
+        qmi_message_dms_get_capabilities_output_unref (output);
+        return;
+    }
+    qmi_message_dms_get_capabilities_output_get_info (output, NULL, NULL, NULL, NULL,
+                                                      &radio_interface_list, NULL);
+
+    networks = g_string_new ("");
+    memset(dmsCtx->SupportedRAT, 0, sizeof(dmsCtx->SupportedRAT));
+    for (i = 0; i < radio_interface_list->len; i++) {
+        g_string_append (networks, 
+			qmi_dms_radio_interface_get_string (g_array_index (radio_interface_list, QmiDmsRadioInterface, i)));
+        switch (g_array_index (radio_interface_list,QmiDmsRadioInterface,i))
+        {
+          case QMI_DMS_RADIO_INTERFACE_CDMA20001X:
+             interface_str = "CDMA20001X";
+             break;
+          case QMI_DMS_RADIO_INTERFACE_EVDO:
+             interface_str = "EVDO";
+             break;
+          case QMI_DMS_RADIO_INTERFACE_GSM:
+             interface_str = "GSM";
+             break;
+          case QMI_DMS_RADIO_INTERFACE_UMTS:
+             interface_str = "UMTS";
+             break;
+          case QMI_DMS_RADIO_INTERFACE_LTE:
+             interface_str = "LTE";
+             break;
+          case QMI_DMS_RADIO_INTERFACE_5GNR:
+             interface_str = "5GNR";
+             break;
+	  default:
+             interface_str = "UNKNOWN";
+        }
+        strncat(dmsCtx->SupportedRAT,interface_str,strlen(interface_str));
+        if (i != radio_interface_list->len - 1) {
+            g_string_append (networks, ", ");
+            strncat(dmsCtx->SupportedRAT,", ",sizeof(", "));
+	}
+    }
+    
+    CELLULAR_HAL_DBG_PRINT("%s - On ready capabilities value is  %s  \n", __FUNCTION__,dmsCtx->SupportedRAT);
+    g_string_free (networks, TRUE);
+    qmi_message_dms_get_capabilities_output_unref (output);
+}
+
+int cellular_hal_qmi_get_supported_radio_technology( char *supported_rat)
+{
+    //Check whether QMI ready or not
+    if( ( NULL != gpstQMIContext ) && \
+        ( NULL != gpstQMIContext->qmiDevice ) && \
+        ( TRUE == qmi_device_is_open( gpstQMIContext->qmiDevice ) ) )
+    {
+
+        ContextGetIDs *pstCtxGetIDs = NULL;
+        int iLapsedSeconds = 0;
+        ContextDMSInfo  *dmsCtx = &(gpstQMIContext->dmsCtx);
+        if('\0' != dmsCtx->SupportedRAT[0] )
+        {
+           memcpy( supported_rat, dmsCtx->SupportedRAT, strlen(dmsCtx->SupportedRAT) + 1 );
+           CELLULAR_HAL_DBG_PRINT("%s - SupportedRAT '%s' Retrived\n", __FUNCTION__, supported_rat);
+           return RETURN_OK;
+        }
+	else
+        {
+            // supported RAT value not available in locally .. need to query QMI
+	    qmi_client_dms_get_capabilities (QMI_CLIENT_DMS(dmsCtx->dmsClient),
+                                         NULL,
+                                         10,
+                                         NULL,
+                                         (GAsyncReadyCallback)cellular_hal_qmi_get_capabilities_cb,
+                                         dmsCtx);
+         }
+
+         //Wait here till IDs query
+         while ( 1 )
+         {
+	     if('\0' != dmsCtx->SupportedRAT[0] )
+             {
+                 memcpy( supported_rat, dmsCtx->SupportedRAT, strlen(dmsCtx->SupportedRAT) + 1 );
+                 CELLULAR_HAL_DBG_PRINT("%s - Operation complete and value is %s  \n", __FUNCTION__,supported_rat);
+                 break;
+             }
+             else if( iLapsedSeconds >= CELLULAR_QMI_GET_CAPS_MAX_WAITIME )
+             {
+                 CELLULAR_HAL_DBG_PRINT("%s - Timeout during IDs Query so sending empty supportedRAT\n",__FUNCTION__);
+                 break;
+             }
+             sleep(1);
+             iLapsedSeconds++;
+         }
+         return RETURN_OK;
+    }
+    else
+    {
+        CELLULAR_HAL_DBG_PRINT("%s - QMI not ready so can't get %s \n", __FUNCTION__, supported_rat);
+        return RETURN_ERROR;
+    }
+}
 
 /* UIM */
 static gchar* cellular_hal_qmi_decode_iccid (const gchar *bcd, gsize bcd_len)
@@ -3884,6 +4014,234 @@ int cellular_hal_qmi_set_modem_network_operation( NASAttachDetachOperation_t net
     else
     {
         CELLULAR_HAL_DBG_PRINT("%s - QMI(%s) not ready so can't configure modem attach/detach\n", __FUNCTION__, gpstQMIContext->modem_device_name);
+        return RETURN_ERROR;
+    }
+}
+
+static void cellular_hal_qmi_get_technology_preference_cb (QmiClientNas *client,
+                                                              GAsyncResult *res,
+							      gpointer user_data)
+{
+    QmiMessageNasGetTechnologyPreferenceOutput *output;
+    GError *error = NULL;
+    QmiNasRadioTechnologyPreference preference,mask;
+    QmiNasPreferenceDuration duration;
+    g_autofree gchar *preference_string = NULL;
+    ContextNASInfo *nasCtx = (ContextNASInfo*)user_data;
+    output = qmi_client_nas_get_technology_preference_finish (client, res, &error);
+    if (!output) {
+        CELLULAR_HAL_DBG_PRINT("%s - ERROR !! Operation failed :%s  \n", __FUNCTION__,error->message);
+        g_error_free (error);
+        return;
+    }
+    if (!qmi_message_nas_get_technology_preference_output_get_result (output, &error)) {
+        CELLULAR_HAL_DBG_PRINT("%s - ERROR !! could not get technology preference  :%s  \n", __FUNCTION__,error->message);
+        g_error_free (error);
+        qmi_message_nas_get_technology_preference_output_unref (output);
+        return;
+    }
+    qmi_message_nas_get_technology_preference_output_get_active (
+        output,
+        &preference,
+        &duration,
+        NULL);
+    memset(nasCtx->preferredRAT,0,sizeof(nasCtx->preferredRAT));
+    if (preference == QMI_NAS_RADIO_TECHNOLOGY_PREFERENCE_AUTO)
+    {
+       strncpy(nasCtx->preferredRAT,"AUTO,",sizeof(nasCtx->preferredRAT));
+    }
+    else {
+            if ( preference & QMI_NAS_RADIO_TECHNOLOGY_PREFERENCE_3GPP2)
+            {
+                if (preference & QMI_NAS_RADIO_TECHNOLOGY_PREFERENCE_CDMA_OR_WCDMA)
+                     strcat(nasCtx->preferredRAT,"CDMA20001X,");
+                if (preference & QMI_NAS_RADIO_TECHNOLOGY_PREFERENCE_HDR)
+                     strcat(nasCtx->preferredRAT,"EVDO,");
+            }
+	    if( preference & QMI_NAS_RADIO_TECHNOLOGY_PREFERENCE_3GPP)
+            {
+                if (preference & QMI_NAS_RADIO_TECHNOLOGY_PREFERENCE_AMPS_OR_GSM)
+                     strcat(nasCtx->preferredRAT,"GSM,");
+                else{
+                     //strcat(nasCtx->preferredRAT,"UMTS,");
+		     //Note: Display this tech preference only modem firmware supports UMTS alone 
+                }
+
+	    }
+            if (preference & QMI_NAS_RADIO_TECHNOLOGY_PREFERENCE_LTE )
+                strcat(nasCtx->preferredRAT,"LTE,");
+    }
+    nasCtx->preferredRAT[strlen(nasCtx->preferredRAT)-1] = '\0'; // just to remove last comma.
+
+    CELLULAR_HAL_DBG_PRINT("%s - On ready preferred RAT value is  %s  \n", __FUNCTION__,nasCtx->preferredRAT);
+    qmi_message_nas_get_technology_preference_output_unref (output);
+}
+
+QmiNasRadioTechnologyPreference
+supported_mode_to_qmi_radio_technology_preference (char* pref_mode)
+{
+    ContextDMSInfo  *dmsCtx = &(gpstQMIContext->dmsCtx);
+    QmiNasRadioTechnologyPreference pref = 0;
+
+    // Note: make sure pref_mode  must be part of supported tech
+    if (strstr(pref_mode,"CDMA20001X") && strstr(dmsCtx->SupportedRAT,"CDMA20001X"))
+    {
+        pref |= QMI_NAS_RADIO_TECHNOLOGY_PREFERENCE_3GPP2;
+        pref |= QMI_NAS_RADIO_TECHNOLOGY_PREFERENCE_CDMA_OR_WCDMA;
+    }
+    if (strstr (pref_mode,"EVDO") && strstr(dmsCtx->SupportedRAT,"EVDO"))
+    {
+        pref |= QMI_NAS_RADIO_TECHNOLOGY_PREFERENCE_3GPP2;
+        pref |= QMI_NAS_RADIO_TECHNOLOGY_PREFERENCE_HDR;
+    }
+    if (strstr (pref_mode,"GSM") && strstr(dmsCtx->SupportedRAT,"GSM"))
+    {
+        pref |= QMI_NAS_RADIO_TECHNOLOGY_PREFERENCE_3GPP;
+        pref |= QMI_NAS_RADIO_TECHNOLOGY_PREFERENCE_AMPS_OR_GSM;
+    }
+    if (strstr (pref_mode,"UMTS") && strstr(dmsCtx->SupportedRAT,"UMTS"))
+    {
+        pref |= QMI_NAS_RADIO_TECHNOLOGY_PREFERENCE_3GPP;
+        pref |= QMI_NAS_RADIO_TECHNOLOGY_PREFERENCE_CDMA_OR_WCDMA;
+    }
+    if (strstr (pref_mode,"LTE") && strstr(dmsCtx->SupportedRAT,"LTE"))
+    {
+        pref |= QMI_NAS_RADIO_TECHNOLOGY_PREFERENCE_3GPP;    //FIXME:Adding 3G flags as LTE option alone is not operational  
+        pref |= QMI_NAS_RADIO_TECHNOLOGY_PREFERENCE_CDMA_OR_WCDMA; //Adding 3G flags  
+        pref |= QMI_NAS_RADIO_TECHNOLOGY_PREFERENCE_LTE;
+    }
+    if (strstr (pref_mode,"5GNR") && strstr(dmsCtx->SupportedRAT,"5GNR"))
+    {
+        pref |= QMI_NAS_RADIO_TECHNOLOGY_PREFERENCE_AUTO;  //5G not defined in tech preference..add auto for now
+    }
+    if (strstr (pref_mode,"AUTO")) 
+    {
+        pref |= QMI_NAS_RADIO_TECHNOLOGY_PREFERENCE_AUTO;
+    }
+    CELLULAR_HAL_DBG_PRINT("%s - RAT preference mapped value %d... \n", __FUNCTION__,pref);
+    return pref;
+}
+
+int cellular_hal_qmi_get_preferred_radio_technology( char *preferred_rat)
+{
+    ContextNASInfo   *nasCtx = &(gpstQMIContext->nasCtx);
+    //Check whether QMI ready or not
+    if( ( NULL != gpstQMIContext ) && \
+        ( NULL != gpstQMIContext->qmiDevice ) && \
+        ( TRUE == qmi_device_is_open( gpstQMIContext->qmiDevice ) )&& \
+        ( NULL != nasCtx->nasClient ) )
+    {
+        if( '\0' != nasCtx->preferredRAT[0] )
+        {
+            strncpy( preferred_rat, nasCtx->preferredRAT, strlen(nasCtx->preferredRAT) + 1 );
+            CELLULAR_HAL_DBG_PRINT("%s -  Preferred RAT '%s' Retrived via DML\n", __FUNCTION__,preferred_rat);
+            return RETURN_OK;
+        }
+ 
+        CELLULAR_HAL_DBG_PRINT("%s - Invoking QMI call to get preferred RAT \n", __FUNCTION__);
+        int iLapsedSeconds = 0;
+        qmi_client_nas_get_technology_preference (QMI_CLIENT_NAS(nasCtx->nasClient),
+                                                  NULL,
+                                                  10,
+                                                  NULL,
+                                                  (GAsyncReadyCallback)cellular_hal_qmi_get_technology_preference_cb,
+                                                  nasCtx);
+        //Wait here till IDs query
+        while ( 1 )
+        {
+            if('\0' != nasCtx->preferredRAT[0])
+            {
+                strncpy(preferred_rat, nasCtx->preferredRAT, strlen(nasCtx->preferredRAT));
+                CELLULAR_HAL_DBG_PRINT("%s - preferredRAT'%s' from QMI DML\n", __FUNCTION__,preferred_rat);
+                break;
+            }
+            else if( iLapsedSeconds >= CELLULAR_QMI_GET_CAPS_MAX_WAITIME )
+            {
+                CELLULAR_HAL_DBG_PRINT("%s - Timeout during get Prefferer RAT \n",__FUNCTION__);
+                break;
+            }
+            sleep(1);
+            iLapsedSeconds++;
+        }
+        return RETURN_OK;
+    }
+    else
+    {
+        CELLULAR_HAL_DBG_PRINT("%s - QMI not ready so can't quey for preferred tech \n", __FUNCTION__);
+        return RETURN_ERROR;
+    }
+}
+
+static void
+set_current_capabilities_set_technology_preference_cb (QmiClientNas *client,
+                                                          GAsyncResult *res,
+                                                          gpointer  user_data)
+{
+    QmiMessageNasSetTechnologyPreferenceOutput *output = NULL;
+    GError                                     *error = NULL;
+    char *preferred_rat  = (char*) user_data;
+    ContextNASInfo   *nasCtx = &(gpstQMIContext->nasCtx);
+    output = qmi_client_nas_get_technology_preference_finish (client, res, &error);
+
+    output = qmi_client_nas_set_technology_preference_finish (client, res, &error);
+    if (!output || !qmi_message_nas_set_technology_preference_output_get_result (output, &error)) {
+        g_clear_error (&error);
+	// In case of QMI_PROTOCOL_ERROR_NO_EFFECT ---no need of reset
+        CELLULAR_HAL_DBG_PRINT("%s - No operation ..or Error  \n", __FUNCTION__);
+    }
+    else { //sucess... Issue the reset
+        CELLULAR_HAL_DBG_PRINT("%s - Issuing the RESET  \n",__FUNCTION__);
+        cellular_hal_qmi_set_modem_operating_configuration(CELLULAR_MODEM_SET_OFFLINE);
+        cellular_hal_qmi_set_modem_operating_configuration(CELLULAR_MODEM_SET_ONLINE);
+    }
+    if(output)
+        qmi_message_nas_set_technology_preference_output_unref (output);
+    // update local preferred RAT value..dont update on error (No error handling as of now)
+    memset(nasCtx->preferredRAT,0,sizeof(nasCtx->preferredRAT));
+    strncpy(nasCtx->preferredRAT, preferred_rat, strlen(preferred_rat) + 1 );
+    if(preferred_rat)
+        free(preferred_rat);
+}
+
+int cellular_hal_qmi_set_preferred_radio_technology (char *preferred_rat)
+{
+    QmiMessageNasSetTechnologyPreferenceInput *input;
+    QmiNasRadioTechnologyPreference            pref;
+    ContextNASInfo   *nasCtx = &(gpstQMIContext->nasCtx);
+    char *preferred_rat_local = NULL;
+    //Check whether QMI ready or not
+    if( ( NULL != gpstQMIContext ) && \
+        ( NULL != gpstQMIContext->qmiDevice ) && \
+        ( TRUE == qmi_device_is_open( gpstQMIContext->qmiDevice ) )&& \
+        ( NULL != nasCtx->nasClient ) )
+     {
+         ContextDMSInfo  *dmsCtx = &(gpstQMIContext->dmsCtx);
+         if('\0' == dmsCtx->SupportedRAT[0] )  // Make sure we have supported RAT ready
+         {
+            char supported_rat[128];
+            cellular_hal_qmi_get_supported_radio_technology(supported_rat);
+         }
+
+         CELLULAR_HAL_DBG_PRINT("%s - Invoking QMI call to set preferred RAT \n", __FUNCTION__);
+         ContextNASQuery *pstCtxNASQuery = NULL;
+         int iLapsedSeconds = 0;
+         preferred_rat_local = strdup(preferred_rat);
+
+         // prepare RAT pref bit mapping
+         pref = supported_mode_to_qmi_radio_technology_preference(preferred_rat);
+
+         input = qmi_message_nas_set_technology_preference_input_new ();
+         qmi_message_nas_set_technology_preference_input_set_current (input, pref, QMI_NAS_PREFERENCE_DURATION_PERMANENT, NULL);
+
+         qmi_client_nas_set_technology_preference (nasCtx->nasClient, input, 5, NULL,
+                                                   (GAsyncReadyCallback)set_current_capabilities_set_technology_preference_cb,
+                                                   preferred_rat_local);
+         qmi_message_nas_set_technology_preference_input_unref (input);
+         return RETURN_OK;
+    }
+    else
+    {
+        CELLULAR_HAL_DBG_PRINT("%s - QMI not ready so can't set  preferred tech \n", __FUNCTION__);
         return RETURN_ERROR;
     }
 }
@@ -5731,6 +6089,80 @@ static void  cellular_hal_qmi_get_current_settings ( QmiClientWds *wdsClient, gp
     qmi_message_wds_get_current_settings_input_unref (input);
 }
 
+static void
+cellular_hal_qmi_get_data_bearer_technology_cb (QmiClientWds *client,
+                                                   GAsyncResult *res,
+						   gpointer  user_data)
+{
+    GError *error = NULL;
+    GTask                   *task        = (GTask*)user_data;
+    QmiMessageWdsGetDataBearerTechnologyOutput *output;
+    QmiWdsDataBearerTechnology current;
+    ContextNWStart          *pNWStartCtx   = NULL;
+    ContextWDSInfo          *wdsCtx   = NULL;
+    QMIContextStructPrivate *pstQMIContext = NULL;
+    pNWStartCtx   = g_task_get_task_data (task);
+    pstQMIContext = (QMIContextStructPrivate*)pNWStartCtx->vpPrivateData;
+    
+    wdsCtx         = &(pstQMIContext->wdsCtx);
+    output = qmi_client_wds_get_data_bearer_technology_finish (client, res, &error);
+    if (!output) {
+	CELLULAR_HAL_DBG_PRINT("%s - error: operation failed  %s\n", __FUNCTION__,error->message);
+        g_error_free (error);
+	//End Task
+        pNWStartCtx->uiCurrentStep = WDS_NW_START_END;
+        cellular_hal_qmi_start_network_connection_step(task);
+        return;
+    }
+    if (!qmi_message_wds_get_data_bearer_technology_output_get_result (output, &error)) {
+	CELLULAR_HAL_DBG_PRINT("%s - error: couldn't get data bearer tech %s\n", __FUNCTION__,error->message);
+        g_error_free (error);
+        qmi_message_wds_get_data_bearer_technology_output_unref (output);
+	//End Task
+        pNWStartCtx->uiCurrentStep = WDS_NW_START_END;
+        cellular_hal_qmi_start_network_connection_step(task);
+        return;
+    }
+    qmi_message_wds_get_data_bearer_technology_output_get_current (
+        output,
+        &current,
+        NULL);
+    switch (current){
+        case QMI_WDS_DATA_BEARER_TECHNOLOGY_GSM:
+        case QMI_WDS_DATA_BEARER_TECHNOLOGY_EDGE:
+           strncpy(wdsCtx->currentRAT,"GSM",sizeof(wdsCtx->currentRAT));
+           break;
+        case QMI_WDS_DATA_BEARER_TECHNOLOGY_CDMA20001X:
+        case QMI_WDS_DATA_BEARER_TECHNOLOGY_EHRPD:
+           strncpy(wdsCtx->currentRAT,"CDMA20001X",sizeof(wdsCtx->currentRAT));
+           break;
+        case QMI_WDS_DATA_BEARER_TECHNOLOGY_1xEVDO:
+	case QMI_WDS_DATA_BEARER_TECHNOLOGY_1xEVDO_REVA:
+           strncpy(wdsCtx->currentRAT,"EVDO",sizeof(wdsCtx->currentRAT));
+           break;
+	case QMI_WDS_DATA_BEARER_TECHNOLOGY_UMTS:
+	case QMI_WDS_DATA_BEARER_TECHNOLOGY_HSDPA:
+        case QMI_WDS_DATA_BEARER_TECHNOLOGY_HSDPA_HSUPDA:
+        case QMI_WDS_DATA_BEARER_TECHNOLOGY_HSDPAPLUS:
+        case QMI_WDS_DATA_BEARER_TECHNOLOGY_HSDPAPLUS_HSUPA:
+        case QMI_WDS_DATA_BEARER_TECHNOLOGY_DCHSDPAPLUS:
+        case QMI_WDS_DATA_BEARER_TECHNOLOGY_DCHSDPAPLUS_HSUPA:
+           strncpy(wdsCtx->currentRAT,"UMTS",sizeof(wdsCtx->currentRAT));
+           break;
+        case QMI_WDS_DATA_BEARER_TECHNOLOGY_LTE: 
+           strncpy(wdsCtx->currentRAT,"LTE",sizeof(wdsCtx->currentRAT));
+           break;
+	case QMI_WDS_DATA_BEARER_TECHNOLOGY_UNKNOWN:   
+	default:
+           strncpy(wdsCtx->currentRAT,"UNKNOWN",sizeof(wdsCtx->currentRAT));
+    }
+    CELLULAR_HAL_DBG_PRINT ("%s Data bearer technology (current): '%s'\n",__FUNCTION__,wdsCtx->currentRAT);
+    qmi_message_wds_get_data_bearer_technology_output_unref (output);
+    pNWStartCtx->uiCurrentStep++;
+    cellular_hal_qmi_start_network_connection_step(task);
+}
+
+
 static void cellular_hal_qmi_start_network_cb ( QmiClientWds *wdsClient,
                                                    GAsyncResult *result,
                                                    gpointer  user_data)
@@ -6069,6 +6501,18 @@ static void cellular_hal_qmi_start_network_connection_step( GTask *task )
             cellular_hal_qmi_get_current_settings( QMI_CLIENT_WDS(( TRUE == bIsIPv4 ) ? pstQMIContext->wdsCtx.client_ipv4 : pstQMIContext->wdsCtx.client_ipv6), task );
             return;
         }
+	case WDS_NW_START_GET_DATA_RAT:
+	{
+             unsigned char bIsIPv4 = ( CELLULAR_NETWORK_IP_FAMILY_IPV4 == pNWStartCtx->ip_request_type ) ? TRUE : FALSE;
+             qmi_client_wds_get_data_bearer_technology (QMI_CLIENT_WDS(( TRUE == bIsIPv4 ) ?
+                                                        pstQMIContext->wdsCtx.client_ipv4 : pstQMIContext->wdsCtx.client_ipv6),
+                                                        NULL,
+                                                        10,
+                                                        NULL,
+                                                        (GAsyncReadyCallback)cellular_hal_qmi_get_data_bearer_technology_cb,
+                                                        task);
+              return;
+	}
         case WDS_NW_START_END:
         default:
         {
@@ -6391,7 +6835,8 @@ static void cellular_hal_qmi_stop_network_connection_step( GTask *task )
                     wdsCtx->client_ipv6 = NULL;
                 }
             }
-
+	    if ((wdsCtx->client_ipv6 == NULL) && (wdsCtx->client_ipv4 == NULL))
+                memset(wdsCtx->currentRAT, 0, sizeof(wdsCtx->currentRAT));
             pNWStopCtx->uiCurrentStep++;
         }
         case WDS_NW_STOP_END:
@@ -6702,6 +7147,31 @@ static void cellular_hal_qmi_get_network_packet_stats_step( GTask *task )
             g_object_unref (task);
         }
     }
+}
+
+int cellular_hal_qmi_get_current_radio_technology( char *current_rat)
+{
+    //Check whether QMI ready or not
+    if( ( NULL != gpstQMIContext ) && \
+        ( NULL != gpstQMIContext->qmiDevice ) && \
+        ( TRUE == qmi_device_is_open( gpstQMIContext->qmiDevice ) ) )
+    {
+        ContextWDSInfo  *wdsCtx = &(gpstQMIContext->wdsCtx); 
+        if ((wdsCtx->client_ipv6 != NULL) || (wdsCtx->client_ipv4 != NULL))
+        {
+	    if( '\0' != wdsCtx->currentRAT[0] )
+            {
+               strncpy( current_rat, wdsCtx->currentRAT, strlen(wdsCtx->currentRAT) + 1 );
+               CELLULAR_HAL_DBG_PRINT("%s -  current RAT '%s' Retrived via DML\n", __FUNCTION__,current_rat);
+            }
+        }
+        else
+        {
+           CELLULAR_HAL_DBG_PRINT("%s No active bearer .. current RAT will be empty \n",__FUNCTION__);
+	   return RETURN_ERROR;
+        }
+    }
+    return RETURN_OK;
 }
 
 static void cellular_hal_qmi_get_network_packet_stats_context_free( ContextNWPacketStats *pNWPktStatsCtx )

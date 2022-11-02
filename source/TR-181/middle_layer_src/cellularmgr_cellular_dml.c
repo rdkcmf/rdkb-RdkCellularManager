@@ -1034,20 +1034,23 @@ Cellular_Interface_GetParamStringValue
     if( AnscEqualString(ParamName, "SupportedAccessTechnologies", TRUE))
     {
         /* collect value */
+	CellularMgr_GetModemSupportedRadioTechnology(pstInterfaceInfo->SupportedAccessTechnologies);
         AnscCopyString(pValue, pstInterfaceInfo->SupportedAccessTechnologies);
         return 0;
     }
 
-    if( AnscEqualString(ParamName, "PreferedAccessTechnologies", TRUE))
+    if( AnscEqualString(ParamName, "PreferredAccessTechnologies", TRUE))
     {
         /* collect value */
-        AnscCopyString(pValue, pstInterfaceInfo->PreferedAccessTechnologies);
+	CellularMgr_GetModemPreferredRadioTechnology( pstInterfaceInfo->PreferredAccessTechnologies );
+        AnscCopyString(pValue, pstInterfaceInfo->PreferredAccessTechnologies);
         return 0;
     }
 
     if( AnscEqualString(ParamName, "CurrentAccessTechnology", TRUE))
     {
         /* collect value */
+	CellularMgr_GetModemCurrentRadioTechnology( pstInterfaceInfo->CurrentAccessTechnology );
         AnscCopyString(pValue, pstInterfaceInfo->CurrentAccessTechnology);
         return 0;
     }
@@ -1101,6 +1104,18 @@ Cellular_Interface_SetParamStringValue
         /* save update to backup */
         AnscCopyString(pstInterfaceInfo->LowerLayers, pString);
         return TRUE;
+    }
+    
+    if( AnscEqualString(ParamName, "PreferredAccessTechnologies", TRUE))
+    {
+        /* save update to backup */
+        if( RETURN_OK == CellularMgr_SetModemPreferredRadioTechnology( pString))
+        {
+           AnscCopyString(pstInterfaceInfo->PreferredAccessTechnologies, pString);
+           return TRUE;
+        }   
+	else
+	   return FALSE;
     }
 
     return FALSE;

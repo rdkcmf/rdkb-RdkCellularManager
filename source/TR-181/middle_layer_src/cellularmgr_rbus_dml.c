@@ -693,14 +693,17 @@ static rbusError_t Cellular_Interface_GetParamStringValue_rbus(rbusHandle_t hand
     }
     else if(strcmp(context.name, "SupportedAccessTechnologies") == 0)
     {
+	CellularMgr_GetModemSupportedRadioTechnology(pstInterfaceInfo->SupportedAccessTechnologies); 
         rbusProperty_SetString(property, pstInterfaceInfo->SupportedAccessTechnologies);
     }
-    else if(strcmp(context.name, "PreferedAccessTechnologies") == 0)
+    else if(strcmp(context.name, "PreferredAccessTechnologies") == 0)
     {
-        rbusProperty_SetString(property, pstInterfaceInfo->PreferedAccessTechnologies);
+	CellularMgr_GetModemPreferredRadioTechnology( pstInterfaceInfo->PreferredAccessTechnologies );
+        rbusProperty_SetString(property, pstInterfaceInfo->PreferredAccessTechnologies);
     }
     else if(strcmp(context.name, "CurrentAccessTechnology") == 0)
     {
+	CellularMgr_GetModemCurrentRadioTechnology( pstInterfaceInfo->CurrentAccessTechnology );
         rbusProperty_SetString(property, pstInterfaceInfo->CurrentAccessTechnology);
     }
     else if(strcmp(context.name, "X_RDK_RegisteredService") == 0)
@@ -911,6 +914,21 @@ rbusError_t Cellular_Interface_SetParamStringValue_rbus(rbusHandle_t handle, rbu
 
          AnscCopyString(pstInterfaceInfo->LowerLayers, val);
         /*context.userData is this objects data and val is the property's new value*/
+    }
+    if(strcmp(context.name, "PreferredAccessTechnologies") == 0)
+    {
+        const char* val;
+
+        rbusValueError_t verr = rbusProperty_GetStringEx(property, &val, NULL);
+        if(verr != RBUS_VALUE_ERROR_SUCCESS)
+            return RBUS_ERROR_INVALID_INPUT;
+
+        if (RETURN_OK ==  CellularMgr_SetModemPreferredRadioTechnology( val))
+        {
+            AnscCopyString(pstInterfaceInfo->PreferredAccessTechnologies, val);
+        }
+	else 
+            return RBUS_ERROR_INVALID_INPUT;
     }
     else
     {
@@ -3127,7 +3145,7 @@ rbusError_t registerGeneratedDataElements(rbusHandle_t handle)
         {"Device.Cellular.Interface.{i}.RegistrationRetryTimer", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamUlongValue_rbus, Cellular_Interface_SetParamUlongValue_rbus, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.IMEI", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.SupportedAccessTechnologies", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
-        {"Device.Cellular.Interface.{i}.PreferedAccessTechnologies", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
+        {"Device.Cellular.Interface.{i}.PreferredAccessTechnologies", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, Cellular_Interface_SetParamStringValue_rbus, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.CurrentAccessTechnology", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
 
 
