@@ -686,6 +686,8 @@ static rbusError_t Cellular_Interface_GetParamUlongValue_rbus(rbusHandle_t handl
         return RBUS_ERROR_BUS_ERROR;
     }
 
+    PCELLULAR_INTERFACE_SERVING_INFO    pstServingInfo = &(pstInterfaceInfo->stServingInfo);
+
     if(strcmp(context.name, "LastChange") == 0)
     {
         rbusProperty_SetUInt32(property, pstInterfaceInfo->LastChange);
@@ -701,6 +703,10 @@ static rbusError_t Cellular_Interface_GetParamUlongValue_rbus(rbusHandle_t handl
     else if(strcmp(context.name, "RegistrationRetryTimer") == 0)
     {
         rbusProperty_SetUInt32(property, pstInterfaceInfo->RegistrationRetryTimer);
+    }
+    else if(strcmp(context.name, "Rfcn") == 0)
+    {
+        rbusProperty_SetUInt32(property, pstServingInfo->Rfcn);
     }
     else
     {
@@ -719,6 +725,8 @@ static rbusError_t Cellular_Interface_GetParamStringValue_rbus(rbusHandle_t hand
     {
         return RBUS_ERROR_BUS_ERROR;
     }
+
+    PCELLULAR_INTERFACE_SERVING_INFO    pstServingInfo = &(pstInterfaceInfo->stServingInfo);
 
     if(strcmp(context.name, "Status") == 0)
     {
@@ -781,6 +789,65 @@ static rbusError_t Cellular_Interface_GetParamStringValue_rbus(rbusHandle_t hand
         else
         {
             rbusProperty_SetString(property, "NONE");
+        }
+    }
+    else if(strcmp(context.name, "CellId") == 0)
+    {
+        rbusProperty_SetString(property, pstServingInfo->CellId);
+    }
+    else if(strcmp(context.name, "Rat") == 0)
+    {
+        if (pstServingInfo->Rat == RAT_INFO_GSM)
+        {
+            rbusProperty_SetString(property, "GSM");
+        }
+        else if (pstServingInfo->Rat == RAT_INFO_UMTS)
+        {
+            rbusProperty_SetString(property, "UMTS");
+        }
+        else if (pstServingInfo->Rat == RAT_INFO_LTE)
+        {
+            rbusProperty_SetString(property, "LTE");
+        }
+        else
+        {
+            rbusProperty_SetString(property, "None");
+        }
+    }
+    else if(strcmp(context.name, "PlmnId") == 0)
+    {
+        rbusProperty_SetString(property, pstServingInfo->PlmnId);
+    }
+    else if(strcmp(context.name, "AreaCode") == 0)
+    {
+        rbusProperty_SetString(property, pstServingInfo->AreaCode);
+    }
+    else if(strcmp(context.name, "X_RDK_RadioEnvConditions") == 0)
+    {
+        pstInterfaceInfo->RadioEnvConditions = CellularMgr_GetRadioEnvConditions( );
+        if (pstInterfaceInfo->RadioEnvConditions == RADIO_ENV_CONDITION_EXCELLENT)
+        {
+            rbusProperty_SetString(property, "EXCELLENT");
+        }
+        else if (pstInterfaceInfo->RadioEnvConditions == RADIO_ENV_CONDITION_GOOD)
+        {
+            rbusProperty_SetString(property, "GOOD");
+        }
+        else if (pstInterfaceInfo->RadioEnvConditions == RADIO_ENV_CONDITION_FAIR)
+        {
+            rbusProperty_SetString(property, "FAIR");
+        }
+        else if (pstInterfaceInfo->RadioEnvConditions == RADIO_ENV_CONDITION_POOR)
+        {
+            rbusProperty_SetString(property, "POOR");
+        }
+        else if (pstInterfaceInfo->RadioEnvConditions == RADIO_ENV_CONDITION_UNAVAILABLE)
+        {
+            rbusProperty_SetString(property, "UNAVAILABLE");
+        }
+        else
+        {
+            rbusProperty_SetString(property, "None");
         }
     }
     else
@@ -924,6 +991,53 @@ rbusError_t Cellular_Interface_SetParamUlongValue_rbus(rbusHandle_t handle, rbus
     if(opts->commit)
     {
       return do_Cellular_Interface_Validate_Cellular_Interface_Commit_Cellular_Interface_Rollback(&context);
+    }
+
+    return RBUS_ERROR_SUCCESS;
+}
+
+rbusError_t Cellular_Interface_GetParamIntValue_rbus(rbusHandle_t handle, rbusProperty_t property, rbusGetHandlerOptions_t* opts)
+{
+    HandlerContext context = GetPropertyContext(property);
+    PCELLULAR_INTERFACE_INFO        pstInterfaceInfo = (PCELLULAR_INTERFACE_INFO)context.userData;
+
+    if (pstInterfaceInfo == NULL)
+    {
+        return RBUS_ERROR_BUS_ERROR;
+    }
+
+    PCELLULAR_INTERFACE_SERVING_INFO    pstServingInfo       = &(pstInterfaceInfo->stServingInfo);
+
+    if (pstServingInfo == NULL)
+    {
+        return RBUS_ERROR_BUS_ERROR;
+    }
+
+    CellularMgr_RadioSignalGetSignalInfo( pstServingInfo );
+
+    if(strcmp(context.name, "RSSI") == 0)
+    {
+        rbusProperty_SetInt32(property, pstServingInfo->Rssi);
+    }
+    else if(strcmp(context.name, "X_RDK_SNR") == 0)
+    {
+        rbusProperty_SetInt32(property, pstServingInfo->Snr);
+    }
+    else if(strcmp(context.name, "RSRP") == 0)
+    {
+        rbusProperty_SetInt32(property, pstServingInfo->Rsrp);
+    }
+    else if(strcmp(context.name, "RSRQ") == 0)
+    {
+        rbusProperty_SetInt32(property, pstServingInfo->Rsrq);
+    }
+    else if(strcmp(context.name, "X_RDK_TRX") == 0)
+    {
+        rbusProperty_SetInt32(property, pstServingInfo->Trx);
+    }
+    else
+    {
+        return RBUS_ERROR_INVALID_INPUT;
     }
 
     return RBUS_ERROR_SUCCESS;
@@ -1377,168 +1491,6 @@ static rbusError_t NetworkInUse_GetParamStringValue_rbus(rbusHandle_t handle, rb
     else if(strcmp(context.name, "Name") == 0)
     {
         rbusProperty_SetString(property, pstPlmnInfo->NetworkInUse_Name);
-    }
-    else
-    {
-        return RBUS_ERROR_INVALID_INPUT;
-    }
-
-    return RBUS_ERROR_SUCCESS;
-}
-
-static rbusError_t RadioSignal_GetParamIntValue_rbus(rbusHandle_t handle, rbusProperty_t property, rbusGetHandlerOptions_t* opts)
-{
-    HandlerContext context = GetPropertyContext(property);
-    PCELLULAR_INTERFACE_INFO        pstInterfaceInfo = (PCELLULAR_INTERFACE_INFO)context.userData;
-
-    if (pstInterfaceInfo == NULL)
-    {
-        return RBUS_ERROR_BUS_ERROR;
-    }
-
-    PCELLULAR_INTERFACE_SERVING_INFO    pstServingInfo       = &(pstInterfaceInfo->stServingInfo);
-
-    if (pstServingInfo == NULL)
-    {
-        return RBUS_ERROR_BUS_ERROR;
-    }
-
-    CellularMgr_RadioSignalGetSignalInfo( pstServingInfo );
-
-    if(strcmp(context.name, "Rssi") == 0)
-    {
-        rbusProperty_SetInt32(property, pstServingInfo->Rssi);
-    }
-    else if(strcmp(context.name, "Snr") == 0)
-    {
-        rbusProperty_SetInt32(property, pstServingInfo->Snr);
-    }
-    else if(strcmp(context.name, "Rsrp") == 0)
-    {
-        rbusProperty_SetInt32(property, pstServingInfo->Rsrp);
-    }
-    else if(strcmp(context.name, "Rsrq") == 0)
-    {
-        rbusProperty_SetInt32(property, pstServingInfo->Rsrq);
-    }
-    else if(strcmp(context.name, "Trx") == 0)
-    {
-        rbusProperty_SetInt32(property, pstServingInfo->Trx);
-    }
-    else
-    {
-        return RBUS_ERROR_INVALID_INPUT;
-    }
-
-    return RBUS_ERROR_SUCCESS;
-}
-
-static rbusError_t RadioSignal_GetParamUlongValue_rbus(rbusHandle_t handle, rbusProperty_t property, rbusGetHandlerOptions_t* opts)
-{
-    HandlerContext context = GetPropertyContext(property);
-    PCELLULAR_INTERFACE_INFO        pstInterfaceInfo = (PCELLULAR_INTERFACE_INFO)context.userData;
-
-    if (pstInterfaceInfo == NULL)
-    {
-        return RBUS_ERROR_BUS_ERROR;
-    }
-
-    PCELLULAR_INTERFACE_SERVING_INFO    pstServingInfo   = &(pstInterfaceInfo->stServingInfo);
-    if (pstServingInfo == NULL)
-    {
-        return RBUS_ERROR_BUS_ERROR;
-    }
-
-    CellularMgr_RadioSignalGetSignalInfo( pstServingInfo );
-
-    if(strcmp(context.name, "Rfcn") == 0)
-    {
-        rbusProperty_SetUInt32(property, pstServingInfo->Rfcn);
-    }
-    else
-    {
-        return RBUS_ERROR_INVALID_INPUT;
-    }
-
-    return RBUS_ERROR_SUCCESS;
-}
-
-static rbusError_t RadioSignal_GetParamStringValue_rbus(rbusHandle_t handle, rbusProperty_t property, rbusGetHandlerOptions_t* opts)
-{
-    HandlerContext context = GetPropertyContext(property);
-    PCELLULAR_INTERFACE_INFO        pstInterfaceInfo = (PCELLULAR_INTERFACE_INFO)context.userData;
-
-    if (pstInterfaceInfo == NULL)
-    {
-        return RBUS_ERROR_BUS_ERROR;
-    }
-
-    PCELLULAR_INTERFACE_SERVING_INFO    pstServingInfo   = &(pstInterfaceInfo->stServingInfo);
-    if (pstServingInfo == NULL)
-    {
-        return RBUS_ERROR_BUS_ERROR;
-    }
-
-    CellularMgr_RadioSignalGetSignalInfo( pstServingInfo );
-
-    if(strcmp(context.name, "CellId") == 0)
-    {
-        rbusProperty_SetString(property, pstServingInfo->CellId);
-    }
-    else if(strcmp(context.name, "Rat") == 0)
-    {
-        if (pstServingInfo->Rat == RAT_INFO_GSM)
-        {
-            rbusProperty_SetString(property, "GSM");
-        }
-        else if (pstServingInfo->Rat == RAT_INFO_UMTS)
-        {
-            rbusProperty_SetString(property, "UMTS");
-        }
-        else if (pstServingInfo->Rat == RAT_INFO_LTE)
-        {
-            rbusProperty_SetString(property, "LTE");
-        }
-        else
-        {
-            rbusProperty_SetString(property, "None");
-        }
-    }
-    else if(strcmp(context.name, "PlmnId") == 0)
-    {
-        rbusProperty_SetString(property, pstServingInfo->PlmnId);
-    }
-    else if(strcmp(context.name, "AreaCode") == 0)
-    {
-        rbusProperty_SetString(property, pstServingInfo->AreaCode);
-    }
-    else if(strcmp(context.name, "RadioEnvConditions") == 0)
-    {
-        pstInterfaceInfo->RadioEnvConditions = CellularMgr_GetRadioEnvConditions( );
-        if (pstInterfaceInfo->RadioEnvConditions == RADIO_ENV_CONDITION_EXCELLENT)
-        {
-            rbusProperty_SetString(property, "EXCELLENT");
-        }
-        else if (pstInterfaceInfo->RadioEnvConditions == RADIO_ENV_CONDITION_GOOD)
-        {
-            rbusProperty_SetString(property, "GOOD");
-        }
-        else if (pstInterfaceInfo->RadioEnvConditions == RADIO_ENV_CONDITION_FAIR)
-        {
-            rbusProperty_SetString(property, "FAIR");
-        }
-        else if (pstInterfaceInfo->RadioEnvConditions == RADIO_ENV_CONDITION_POOR)
-        {
-            rbusProperty_SetString(property, "POOR");
-        }
-        else if (pstInterfaceInfo->RadioEnvConditions == RADIO_ENV_CONDITION_UNAVAILABLE)
-        {
-            rbusProperty_SetString(property, "UNAVAILABLE");
-        }
-        else
-        {
-            rbusProperty_SetString(property, "None");
-        }
     }
     else
     {
@@ -3268,7 +3220,17 @@ rbusError_t registerGeneratedDataElements(rbusHandle_t handle)
         {"Device.Cellular.Interface.{i}.SupportedAccessTechnologies", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.PreferredAccessTechnologies", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, Cellular_Interface_SetParamStringValue_rbus, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.CurrentAccessTechnology", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
-
+        {"Device.Cellular.Interface.{i}.CellId", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
+        {"Device.Cellular.Interface.{i}.Rat", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
+        {"Device.Cellular.Interface.{i}.Rfcn", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamUlongValue_rbus, NULL, NULL, NULL, NULL, NULL}},
+        {"Device.Cellular.Interface.{i}.PlmnId", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
+        {"Device.Cellular.Interface.{i}.AreaCode", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
+        {"Device.Cellular.Interface.{i}.RSSI", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamIntValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
+        {"Device.Cellular.Interface.{i}.X_RDK_SNR", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamIntValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
+        {"Device.Cellular.Interface.{i}.RSRP", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamIntValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
+        {"Device.Cellular.Interface.{i}.RSRQ", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamIntValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
+        {"Device.Cellular.Interface.{i}.X_RDK_TRX", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamIntValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
+        {"Device.Cellular.Interface.{i}.X_RDK_RadioEnvConditions", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
 
         {"Device.Cellular.Interface.{i}.X_RDK_Identification.Imei", RBUS_ELEMENT_TYPE_PROPERTY, {Identification_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.X_RDK_Identification.Iccid", RBUS_ELEMENT_TYPE_PROPERTY, {Identification_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
@@ -3290,17 +3252,6 @@ rbusError_t registerGeneratedDataElements(rbusHandle_t handle)
         {"Device.Cellular.Interface.{i}.X_RDK_PlmnAccess.NetworkInUse.Mcc", RBUS_ELEMENT_TYPE_PROPERTY, {NetworkInUse_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.X_RDK_PlmnAccess.NetworkInUse.Mnc", RBUS_ELEMENT_TYPE_PROPERTY, {NetworkInUse_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.X_RDK_PlmnAccess.NetworkInUse.Name", RBUS_ELEMENT_TYPE_PROPERTY, {NetworkInUse_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
-        {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.CellId", RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
-        {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.Rat", RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
-        {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.Rfcn", RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamUlongValue_rbus, NULL, NULL, NULL, NULL, NULL}},
-        {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.PlmnId", RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
-        {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.AreaCode", RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
-        {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.Rssi", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamIntValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
-        {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.Snr", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamIntValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
-        {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.Rsrp", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamIntValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
-        {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.Rsrq", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamIntValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
-        {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.Trx", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamIntValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
-        {"Device.Cellular.Interface.{i}.X_RDK_RadioSignal.RadioEnvConditions", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {RadioSignal_GetParamStringValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
 
         {"Device.Cellular.Interface.{i}.X_RDK_NeighborCellNumberOfEntries", RBUS_ELEMENT_TYPE_PROPERTY, {NeighborCell_GetEntryCount_rbus, NULL, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.X_RDK_NeighborCell.{i}.", RBUS_ELEMENT_TYPE_TABLE, {NULL, NULL, NULL, NULL, NULL, NULL}},

@@ -887,7 +887,6 @@ static void cellular_hal_qmi_get_transmit_receive_info ( QmiClientNas *nasClient
             NULL)) 
     {
         nasCtx->tx_power = (is_in_traffic) ? (0.1) * ((gdouble)power) : 0;
-        CELLULAR_HAL_DBG_PRINT("%s Successfully got TX Power info, level is '%.1lf dBm'\n",__FUNCTION__,nasCtx->tx_power );
     }
 
     qmi_message_nas_get_tx_rx_info_output_unref (output);

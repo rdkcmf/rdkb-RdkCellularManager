@@ -50,12 +50,12 @@
 extern "C" {
 #endif
 
-#define CELLULARMGR_INFACE_RADIOSIGNAL_RADIOENVCONDITIONS  "Device.Cellular.Interface.%d.X_RDK_RadioSignal.RadioEnvConditions"
-#define CELLULARMGR_INFACE_RADIOSIGNAL_RSSI                "Device.Cellular.Interface.%d.X_RDK_RadioSignal.Rssi"
-#define CELLULARMGR_INFACE_RADIOSIGNAL_SNR                 "Device.Cellular.Interface.%d.X_RDK_RadioSignal.Snr"
-#define CELLULARMGR_INFACE_RADIOSIGNAL_RSRP                "Device.Cellular.Interface.%d.X_RDK_RadioSignal.Rsrp"
-#define CELLULARMGR_INFACE_RADIOSIGNAL_RSRQ                "Device.Cellular.Interface.%d.X_RDK_RadioSignal.Rsrq"
-#define CELLULARMGR_INFACE_RADIOSIGNAL_TRX                 "Device.Cellular.Interface.%d.X_RDK_RadioSignal.Trx"
+#define CELLULARMGR_INFACE_RADIOSIGNAL_RADIOENVCONDITIONS  "Device.Cellular.Interface.%d.X_RDK_RadioEnvConditions"
+#define CELLULARMGR_INFACE_RADIOSIGNAL_RSSI                "Device.Cellular.Interface.%d.RSSI"
+#define CELLULARMGR_INFACE_RADIOSIGNAL_SNR                 "Device.Cellular.Interface.%d.X_RDK_SNR"
+#define CELLULARMGR_INFACE_RADIOSIGNAL_RSRP                "Device.Cellular.Interface.%d.RSRP"
+#define CELLULARMGR_INFACE_RADIOSIGNAL_RSRQ                "Device.Cellular.Interface.%d.RSRQ"
+#define CELLULARMGR_INFACE_RADIOSIGNAL_TRX                 "Device.Cellular.Interface.%d.X_RDK_TRX"
 #define CELLULARMGR_X_RDK_ENABLE                           "Device.Cellular.X_RDK_Enable"
 #define CELLULARMGR_X_RDK_STATUS                           "Device.Cellular.X_RDK_Status"
 #define CELLULARMGR_INFACE_STATUS                          "Device.Cellular.Interface.%d.Status"
@@ -72,11 +72,23 @@ typedef enum _CellularMGR_EnumToString{
 typedef  struct                                      
 {
     int RadioEnvCondSubFlag;
+    unsigned int RadioEnvCondSubInterval;
+    unsigned int RadioEnvCondLapsedCounterTimer;
     int RSSISubFlag;
+    unsigned int RSSISubInterval;
+    unsigned int RSSILapsedCounterTimer;
     int SNRSubFlag;
+    unsigned int SNRSubInterval;
+    unsigned int SNRLapsedCounterTimer;
     int RSRPSubFlag;
+    unsigned int RSRPSubInterval;
+    unsigned int RSRPLapsedCounterTimer;
     int RSRQSubFlag;
+    unsigned int RSRQSubInterval;
+    unsigned int RSRQLapsedCounterTimer;
     int TRXSubFlag;
+    unsigned int TRXSubInterval;
+    unsigned int TRXLapsedCounterTimer;
     
 }CellularMGR_rbusSubListForRadioSignalSt;
 

@@ -101,8 +101,27 @@ void* CellularMgr_RBUS_Events_Monitor_Thread( void *arg )
         if( gRBUSSubListSt.stRadioSignal.RadioEnvCondSubFlag )
         {
             CELLULAR_RADIO_ENV_CONDITIONS enCurrentValue = CellularMgr_GetRadioEnvConditions( );
+            BOOL bIsNeedToPublish = FALSE;
 
-            if ( enPrevValue != enCurrentValue )
+            if( gRBUSSubListSt.stRadioSignal.RadioEnvCondSubInterval )
+            {
+                gRBUSSubListSt.stRadioSignal.RadioEnvCondLapsedCounterTimer += RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL;
+
+                if( gRBUSSubListSt.stRadioSignal.RadioEnvCondLapsedCounterTimer >= gRBUSSubListSt.stRadioSignal.RadioEnvCondSubInterval )
+                {
+                    gRBUSSubListSt.stRadioSignal.RadioEnvCondLapsedCounterTimer = 0;
+                    bIsNeedToPublish = TRUE;
+                }
+            }
+            else 
+            {
+                if ( enPrevValue != enCurrentValue  )
+                {
+                    bIsNeedToPublish = TRUE;
+                }
+            }
+
+            if ( bIsNeedToPublish )
             {
                 char acTmpPrevValue[32] = {0},
                      acTmpCurValue[32]  = {0},
@@ -165,84 +184,199 @@ void* CellularMgr_RBUS_Events_Monitor_Thread( void *arg )
             for( i = 0; i < pstDmlCellular->ulInterfaceNoEntries; i++ )
             {
                 //When it is changing we need to publish if subscribed by others
-                if( ( gRBUSSubListSt.stRadioSignal.RSSISubFlag ) && ( stBackupServingInfo.Rssi != stCurrentServingInfo.Rssi ) )
+                if( gRBUSSubListSt.stRadioSignal.RSSISubFlag )
                 {
-                    char acTmpPrevValue[32]   = {0},
-                         acTmpCurValue[32]    = {0},
-                         acTmpParamName[256]  = {0};
+                    BOOL bIsNeedToPublish = FALSE;
 
-                    snprintf(acTmpPrevValue, sizeof(acTmpPrevValue), "%d", stBackupServingInfo.Rssi);
-                    snprintf(acTmpCurValue, sizeof(acTmpCurValue), "%d", stCurrentServingInfo.Rssi);
-                    snprintf(acTmpParamName, sizeof(acTmpParamName), CELLULARMGR_INFACE_RADIOSIGNAL_RSSI, i + 1);
+                    if( gRBUSSubListSt.stRadioSignal.RSSISubInterval )
+                    {
+                        gRBUSSubListSt.stRadioSignal.RSSILapsedCounterTimer += RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL;
 
-                    stBackupServingInfo.Rssi = stCurrentServingInfo.Rssi;
+                        if( gRBUSSubListSt.stRadioSignal.RSSILapsedCounterTimer >= gRBUSSubListSt.stRadioSignal.RSSISubInterval )
+                        {
+                            gRBUSSubListSt.stRadioSignal.RSSILapsedCounterTimer = 0;
+                            bIsNeedToPublish = TRUE;
+                        }
+                    }
+                    else 
+                    {
+                        if ( stBackupServingInfo.Rssi != stCurrentServingInfo.Rssi )
+                        {
+                            bIsNeedToPublish = TRUE;
+                        }
+                    }
 
-                    CcspTraceInfo(("%s-%d: Publish DM(%s) Prev(%s) Current(%s)\n",__FUNCTION__, __LINE__, acTmpParamName,acTmpPrevValue,acTmpCurValue));
-                    CellularMgr_Rbus_String_EventPublish_OnValueChange(acTmpParamName, acTmpPrevValue, acTmpCurValue, RBUS_INT32);
+                    if( bIsNeedToPublish  )
+                    {
+                        char acTmpPrevValue[32]   = {0},
+                            acTmpCurValue[32]    = {0},
+                            acTmpParamName[256]  = {0};
+
+                        snprintf(acTmpPrevValue, sizeof(acTmpPrevValue), "%d", stBackupServingInfo.Rssi);
+                        snprintf(acTmpCurValue, sizeof(acTmpCurValue), "%d", stCurrentServingInfo.Rssi);
+                        snprintf(acTmpParamName, sizeof(acTmpParamName), CELLULARMGR_INFACE_RADIOSIGNAL_RSSI, i + 1);
+
+                        stBackupServingInfo.Rssi = stCurrentServingInfo.Rssi;
+
+                        CcspTraceInfo(("%s-%d: Publish DM(%s) Prev(%s) Current(%s)\n",__FUNCTION__, __LINE__, acTmpParamName,acTmpPrevValue,acTmpCurValue));
+                        CellularMgr_Rbus_String_EventPublish_OnValueChange(acTmpParamName, acTmpPrevValue, acTmpCurValue, RBUS_INT32);
+                    }
                 }
 
-                if( ( gRBUSSubListSt.stRadioSignal.SNRSubFlag ) && ( stBackupServingInfo.Snr != stCurrentServingInfo.Snr ) )
+                if( gRBUSSubListSt.stRadioSignal.SNRSubFlag )
                 {
-                    char acTmpPrevValue[32]   = {0},
-                         acTmpCurValue[32]    = {0},
-                         acTmpParamName[256]  = {0};
+                    BOOL bIsNeedToPublish = FALSE;
 
-                    snprintf(acTmpPrevValue, sizeof(acTmpPrevValue), "%d", stBackupServingInfo.Snr);
-                    snprintf(acTmpCurValue, sizeof(acTmpCurValue), "%d", stCurrentServingInfo.Snr);
-                    snprintf(acTmpParamName, sizeof(acTmpParamName), CELLULARMGR_INFACE_RADIOSIGNAL_SNR, i + 1);
+                    if( gRBUSSubListSt.stRadioSignal.SNRSubInterval )
+                    {
+                        gRBUSSubListSt.stRadioSignal.SNRLapsedCounterTimer += RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL;
 
-                    stBackupServingInfo.Snr = stCurrentServingInfo.Snr;
+                        if( gRBUSSubListSt.stRadioSignal.SNRLapsedCounterTimer >= gRBUSSubListSt.stRadioSignal.SNRSubInterval )
+                        {
+                            gRBUSSubListSt.stRadioSignal.SNRLapsedCounterTimer = 0;
+                            bIsNeedToPublish = TRUE;
+                        }
+                    }
+                    else 
+                    {
+                        if ( stBackupServingInfo.Snr != stCurrentServingInfo.Snr )
+                        {
+                            bIsNeedToPublish = TRUE;
+                        }
+                    }
 
-                    CcspTraceInfo(("%s-%d: Publish DM(%s) Prev(%s) Current(%s)\n",__FUNCTION__, __LINE__, acTmpParamName,acTmpPrevValue,acTmpCurValue));
-                    CellularMgr_Rbus_String_EventPublish_OnValueChange(acTmpParamName, acTmpPrevValue, acTmpCurValue, RBUS_INT32);
+                    if( bIsNeedToPublish )
+                    {
+                        char acTmpPrevValue[32]   = {0},
+                            acTmpCurValue[32]    = {0},
+                            acTmpParamName[256]  = {0};
+
+                        snprintf(acTmpPrevValue, sizeof(acTmpPrevValue), "%d", stBackupServingInfo.Snr);
+                        snprintf(acTmpCurValue, sizeof(acTmpCurValue), "%d", stCurrentServingInfo.Snr);
+                        snprintf(acTmpParamName, sizeof(acTmpParamName), CELLULARMGR_INFACE_RADIOSIGNAL_SNR, i + 1);
+
+                        stBackupServingInfo.Snr = stCurrentServingInfo.Snr;
+
+                        CcspTraceInfo(("%s-%d: Publish DM(%s) Prev(%s) Current(%s)\n",__FUNCTION__, __LINE__, acTmpParamName,acTmpPrevValue,acTmpCurValue));
+                        CellularMgr_Rbus_String_EventPublish_OnValueChange(acTmpParamName, acTmpPrevValue, acTmpCurValue, RBUS_INT32);
+                    }
                 }
 
-                if( ( gRBUSSubListSt.stRadioSignal.TRXSubFlag ) && ( stBackupServingInfo.Trx != stCurrentServingInfo.Trx ) )
+                if( gRBUSSubListSt.stRadioSignal.TRXSubFlag )
                 {
-                    char acTmpPrevValue[32]   = {0},
-                         acTmpCurValue[32]    = {0},
-                         acTmpParamName[256]  = {0};
+                    BOOL bIsNeedToPublish = FALSE;
 
-                    snprintf(acTmpPrevValue, sizeof(acTmpPrevValue), "%d", stBackupServingInfo.Trx);
-                    snprintf(acTmpCurValue, sizeof(acTmpCurValue), "%d", stCurrentServingInfo.Trx);
-                    snprintf(acTmpParamName, sizeof(acTmpParamName), CELLULARMGR_INFACE_RADIOSIGNAL_TRX, i + 1);
+                    if( gRBUSSubListSt.stRadioSignal.TRXSubInterval )
+                    {
+                        gRBUSSubListSt.stRadioSignal.TRXLapsedCounterTimer += RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL;
 
-                    stBackupServingInfo.Trx = stCurrentServingInfo.Trx;
+                        if( gRBUSSubListSt.stRadioSignal.TRXLapsedCounterTimer >= gRBUSSubListSt.stRadioSignal.TRXSubInterval )
+                        {
+                            gRBUSSubListSt.stRadioSignal.TRXLapsedCounterTimer = 0;
+                            bIsNeedToPublish = TRUE;
+                        }
+                    }
+                    else 
+                    {
+                        if ( stBackupServingInfo.Trx != stCurrentServingInfo.Trx )
+                        {
+                            bIsNeedToPublish = TRUE;
+                        }
+                    }
 
-                    CcspTraceInfo(("%s-%d: Publish DM(%s) Prev(%s) Current(%s)\n",__FUNCTION__, __LINE__, acTmpParamName,acTmpPrevValue,acTmpCurValue));
-                    CellularMgr_Rbus_String_EventPublish_OnValueChange(acTmpParamName, acTmpPrevValue, acTmpCurValue, RBUS_INT32);
+                    if( bIsNeedToPublish  )
+                    {
+                        char acTmpPrevValue[32]   = {0},
+                            acTmpCurValue[32]    = {0},
+                            acTmpParamName[256]  = {0};
+
+                        snprintf(acTmpPrevValue, sizeof(acTmpPrevValue), "%d", stBackupServingInfo.Trx);
+                        snprintf(acTmpCurValue, sizeof(acTmpCurValue), "%d", stCurrentServingInfo.Trx);
+                        snprintf(acTmpParamName, sizeof(acTmpParamName), CELLULARMGR_INFACE_RADIOSIGNAL_TRX, i + 1);
+
+                        stBackupServingInfo.Trx = stCurrentServingInfo.Trx;
+
+                        CcspTraceInfo(("%s-%d: Publish DM(%s) Prev(%s) Current(%s)\n",__FUNCTION__, __LINE__, acTmpParamName,acTmpPrevValue,acTmpCurValue));
+                        CellularMgr_Rbus_String_EventPublish_OnValueChange(acTmpParamName, acTmpPrevValue, acTmpCurValue, RBUS_INT32);
+                    }
                 }
 
-                if( ( gRBUSSubListSt.stRadioSignal.RSRQSubFlag ) && ( stBackupServingInfo.Rsrq != stCurrentServingInfo.Rsrq ) )
+                if( gRBUSSubListSt.stRadioSignal.RSRQSubFlag )
                 {
-                    char acTmpPrevValue[32]   = {0},
-                         acTmpCurValue[32]    = {0},
-                         acTmpParamName[256]  = {0};
+                    BOOL bIsNeedToPublish = FALSE;
 
-                    snprintf(acTmpPrevValue, sizeof(acTmpPrevValue), "%d", stBackupServingInfo.Rsrq);
-                    snprintf(acTmpCurValue, sizeof(acTmpCurValue), "%d", stCurrentServingInfo.Rsrq);
-                    snprintf(acTmpParamName, sizeof(acTmpParamName), CELLULARMGR_INFACE_RADIOSIGNAL_RSRQ, i + 1);
+                    if( gRBUSSubListSt.stRadioSignal.RSRQSubInterval )
+                    {
+                        gRBUSSubListSt.stRadioSignal.RSRQLapsedCounterTimer += RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL;
 
-                    stBackupServingInfo.Rsrq = stCurrentServingInfo.Rsrq;
+                        if( gRBUSSubListSt.stRadioSignal.RSRQLapsedCounterTimer >= gRBUSSubListSt.stRadioSignal.RSRQSubInterval )
+                        {
+                            gRBUSSubListSt.stRadioSignal.RSRQLapsedCounterTimer = 0;
+                            bIsNeedToPublish = TRUE;
+                        }
+                    }
+                    else 
+                    {
+                        if ( stBackupServingInfo.Rsrq != stCurrentServingInfo.Rsrq )
+                        {
+                            bIsNeedToPublish = TRUE;
+                        }
+                    }
 
-                    CcspTraceInfo(("%s-%d: Publish DM(%s) Prev(%s) Current(%s)\n",__FUNCTION__, __LINE__, acTmpParamName,acTmpPrevValue,acTmpCurValue));
-                    CellularMgr_Rbus_String_EventPublish_OnValueChange(acTmpParamName, acTmpPrevValue, acTmpCurValue, RBUS_INT32);
+                    if( bIsNeedToPublish  )
+                    {
+                        char acTmpPrevValue[32]   = {0},
+                            acTmpCurValue[32]    = {0},
+                            acTmpParamName[256]  = {0};
+
+                        snprintf(acTmpPrevValue, sizeof(acTmpPrevValue), "%d", stBackupServingInfo.Rsrq);
+                        snprintf(acTmpCurValue, sizeof(acTmpCurValue), "%d", stCurrentServingInfo.Rsrq);
+                        snprintf(acTmpParamName, sizeof(acTmpParamName), CELLULARMGR_INFACE_RADIOSIGNAL_RSRQ, i + 1);
+
+                        stBackupServingInfo.Rsrq = stCurrentServingInfo.Rsrq;
+
+                        CcspTraceInfo(("%s-%d: Publish DM(%s) Prev(%s) Current(%s)\n",__FUNCTION__, __LINE__, acTmpParamName,acTmpPrevValue,acTmpCurValue));
+                        CellularMgr_Rbus_String_EventPublish_OnValueChange(acTmpParamName, acTmpPrevValue, acTmpCurValue, RBUS_INT32);
+                    }
                 }
 
-                if( ( gRBUSSubListSt.stRadioSignal.RSRPSubFlag ) && ( stBackupServingInfo.Rsrp != stCurrentServingInfo.Rsrp ) )
+                if( gRBUSSubListSt.stRadioSignal.RSRPSubFlag )
                 {
-                    char acTmpPrevValue[32]   = {0},
-                         acTmpCurValue[32]    = {0},
-                         acTmpParamName[256]  = {0};
+                    BOOL bIsNeedToPublish = FALSE;
 
-                    snprintf(acTmpPrevValue, sizeof(acTmpPrevValue), "%d", stBackupServingInfo.Rsrp);
-                    snprintf(acTmpCurValue, sizeof(acTmpCurValue), "%d", stCurrentServingInfo.Rsrp);
-                    snprintf(acTmpParamName, sizeof(acTmpParamName), CELLULARMGR_INFACE_RADIOSIGNAL_RSRP, i + 1);
+                    if( gRBUSSubListSt.stRadioSignal.RSRPSubInterval )
+                    {
+                        gRBUSSubListSt.stRadioSignal.RSRPLapsedCounterTimer += RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL;
 
-                    stBackupServingInfo.Rsrp = stCurrentServingInfo.Rsrp;
+                        if( gRBUSSubListSt.stRadioSignal.RSRPLapsedCounterTimer >= gRBUSSubListSt.stRadioSignal.RSRPSubInterval )
+                        {
+                            gRBUSSubListSt.stRadioSignal.RSRPLapsedCounterTimer = 0;
+                            bIsNeedToPublish = TRUE;
+                        }
+                    }
+                    else 
+                    {
+                        if ( stBackupServingInfo.Rsrp != stCurrentServingInfo.Rsrp )
+                        {
+                            bIsNeedToPublish = TRUE;
+                        }
+                    }
 
-                    CcspTraceInfo(("%s-%d: Publish DM(%s) Prev(%s) Current(%s)\n",__FUNCTION__, __LINE__, acTmpParamName,acTmpPrevValue,acTmpCurValue));
-                    CellularMgr_Rbus_String_EventPublish_OnValueChange(acTmpParamName, acTmpPrevValue, acTmpCurValue, RBUS_INT32);
+                    if( bIsNeedToPublish  )
+                    {
+                        char acTmpPrevValue[32]   = {0},
+                            acTmpCurValue[32]    = {0},
+                            acTmpParamName[256]  = {0};
+
+                        snprintf(acTmpPrevValue, sizeof(acTmpPrevValue), "%d", stBackupServingInfo.Rsrp);
+                        snprintf(acTmpCurValue, sizeof(acTmpCurValue), "%d", stCurrentServingInfo.Rsrp);
+                        snprintf(acTmpParamName, sizeof(acTmpParamName), CELLULARMGR_INFACE_RADIOSIGNAL_RSRP, i + 1);
+
+                        stBackupServingInfo.Rsrp = stCurrentServingInfo.Rsrp;
+
+                        CcspTraceInfo(("%s-%d: Publish DM(%s) Prev(%s) Current(%s)\n",__FUNCTION__, __LINE__, acTmpParamName,acTmpPrevValue,acTmpCurValue));
+                        CellularMgr_Rbus_String_EventPublish_OnValueChange(acTmpParamName, acTmpPrevValue, acTmpCurValue, RBUS_INT32);
+                    }
                 }
             }
         }
@@ -420,88 +554,217 @@ rbusError_t CellularMgrDmlPublishEventHandler(rbusHandle_t handle, rbusEventSubA
 
     *autoPublish = FALSE;
 
-    if(strstr(eventName, ".X_RDK_RadioSignal.RadioEnvConditions"))
+    if(strstr(eventName, ".X_RDK_RadioEnvConditions"))
     {
         if (action == RBUS_EVENT_ACTION_SUBSCRIBE)
         {
+            if( 0 == gRBUSSubListSt.stRadioSignal.RadioEnvCondSubFlag )
+            {
+                gRBUSSubListSt.stRadioSignal.RadioEnvCondLapsedCounterTimer = 0;
+            }
+
             gRBUSSubListSt.stRadioSignal.RadioEnvCondSubFlag++;
-            CcspTraceInfo(("%s-%d : RadioEnvConditions Sub(%d) \n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.RadioEnvCondSubFlag));
+            gRBUSSubListSt.stRadioSignal.RadioEnvCondSubInterval = 0;
+            if( interval > 0 )
+            {
+                gRBUSSubListSt.stRadioSignal.RadioEnvCondSubInterval = RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL;
+                if( 0 == ( interval % RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL ) )
+                {
+                    gRBUSSubListSt.stRadioSignal.RadioEnvCondSubInterval = interval;
+                }
+            }
+
+            CcspTraceInfo(("%s-%d : X_RDK_RadioEnvConditions Sub(%d) Interval(%d)\n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.RadioEnvCondSubFlag,gRBUSSubListSt.stRadioSignal.RadioEnvCondSubInterval));
         }
         else
         {
             if (gRBUSSubListSt.stRadioSignal.RadioEnvCondSubFlag)
+            {
                 gRBUSSubListSt.stRadioSignal.RadioEnvCondSubFlag--;
-            CcspTraceInfo(("%s-%d : RadioEnvConditions UnSub(%d) \n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.RadioEnvCondSubFlag));
+            }
+            else
+            {
+                gRBUSSubListSt.stRadioSignal.RadioEnvCondSubInterval = 0;
+                gRBUSSubListSt.stRadioSignal.RadioEnvCondLapsedCounterTimer = 0;
+            }
+
+            CcspTraceInfo(("%s-%d : X_RDK_RadioEnvConditions UnSub(%d) \n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.RadioEnvCondSubFlag));
         }
     }
-    else if(strstr(eventName, ".X_RDK_RadioSignal.Rssi"))
+    else if(strstr(eventName, ".RSSI"))
     {
         if (action == RBUS_EVENT_ACTION_SUBSCRIBE)
         {
+            if( 0 == gRBUSSubListSt.stRadioSignal.RSSISubFlag )
+            {
+                gRBUSSubListSt.stRadioSignal.RSSILapsedCounterTimer = 0;
+            }
+
             gRBUSSubListSt.stRadioSignal.RSSISubFlag++;
-            CcspTraceInfo(("%s-%d : Rssi Sub(%d) \n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.RSSISubFlag));
+            gRBUSSubListSt.stRadioSignal.RSSISubInterval = 0;
+            if( interval > 0 )
+            {
+                gRBUSSubListSt.stRadioSignal.RSSISubInterval = RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL;
+                if( 0 == ( interval % RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL ) )
+                {
+                    gRBUSSubListSt.stRadioSignal.RSSISubInterval = interval;
+                }
+            }
+
+            CcspTraceInfo(("%s-%d : RSSI Sub(%d) Interval(%d)\n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.RSSISubFlag,gRBUSSubListSt.stRadioSignal.RSSISubInterval));
         }
         else
         {
             if (gRBUSSubListSt.stRadioSignal.RSSISubFlag)
+            {
                 gRBUSSubListSt.stRadioSignal.RSSISubFlag--;
-            CcspTraceInfo(("%s-%d : Rssi UnSub(%d) \n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.RSSISubFlag));
+            }
+            else
+            {
+                gRBUSSubListSt.stRadioSignal.RSSISubInterval = 0;
+                gRBUSSubListSt.stRadioSignal.RSSILapsedCounterTimer = 0;
+            }
+            CcspTraceInfo(("%s-%d : RSSI UnSub(%d) \n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.RSSISubFlag));
         }
     }
-    else if(strstr(eventName, ".X_RDK_RadioSignal.Snr"))
+    else if(strstr(eventName, ".X_RDK_SNR"))
     {
         if (action == RBUS_EVENT_ACTION_SUBSCRIBE)
         {
+            if( 0 == gRBUSSubListSt.stRadioSignal.SNRSubFlag )
+            {
+                gRBUSSubListSt.stRadioSignal.SNRLapsedCounterTimer = 0;
+            }
+
             gRBUSSubListSt.stRadioSignal.SNRSubFlag++;
-            CcspTraceInfo(("%s-%d : Snr Sub(%d) \n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.SNRSubFlag));
+            gRBUSSubListSt.stRadioSignal.SNRSubInterval = 0;
+            if( interval > 0 )
+            {
+                gRBUSSubListSt.stRadioSignal.SNRSubInterval = RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL;
+                if( 0 == ( interval % RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL ) )
+                {
+                    gRBUSSubListSt.stRadioSignal.SNRSubInterval = interval;
+                }
+            }
+            CcspTraceInfo(("%s-%d : X_RDK_SNR Sub(%d) Interval(%d)\n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.SNRSubFlag,gRBUSSubListSt.stRadioSignal.SNRSubInterval));
         }
         else
         {
             if (gRBUSSubListSt.stRadioSignal.SNRSubFlag)
+            {
                 gRBUSSubListSt.stRadioSignal.SNRSubFlag--;
-            CcspTraceInfo(("%s-%d : Snr UnSub(%d) \n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.SNRSubFlag));
+            }
+            else
+            {
+                gRBUSSubListSt.stRadioSignal.SNRSubInterval = 0;
+                gRBUSSubListSt.stRadioSignal.SNRLapsedCounterTimer = 0;
+            }
+            CcspTraceInfo(("%s-%d : X_RDK_SNR UnSub(%d) \n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.SNRSubFlag));
         }
     }
-    else if(strstr(eventName, ".X_RDK_RadioSignal.Rsrp"))
+    else if(strstr(eventName, ".RSRP"))
     {
         if (action == RBUS_EVENT_ACTION_SUBSCRIBE)
         {
+            if( 0 == gRBUSSubListSt.stRadioSignal.RSRPSubFlag )
+            {
+                gRBUSSubListSt.stRadioSignal.RSRPLapsedCounterTimer = 0;
+            }
+
             gRBUSSubListSt.stRadioSignal.RSRPSubFlag++;
-            CcspTraceInfo(("%s-%d : Rsrp Sub(%d) \n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.RSRPSubFlag));
+            gRBUSSubListSt.stRadioSignal.RSRPSubInterval = 0;
+            if( interval > 0 )
+            {
+                gRBUSSubListSt.stRadioSignal.RSRPSubInterval = RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL;
+                if( 0 == ( interval % RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL ) )
+                {
+                    gRBUSSubListSt.stRadioSignal.RSRPSubInterval = interval;
+                }
+            }
+            CcspTraceInfo(("%s-%d : RSRP Sub(%d) Interval(%d)\n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.RSRPSubFlag,gRBUSSubListSt.stRadioSignal.RSRPSubInterval));
         }
         else
         {
             if (gRBUSSubListSt.stRadioSignal.RSRPSubFlag)
+            {
                 gRBUSSubListSt.stRadioSignal.RSRPSubFlag--;
-            CcspTraceInfo(("%s-%d : Rsrp UnSub(%d) \n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.RSRPSubFlag));
+            }
+            else
+            {
+                gRBUSSubListSt.stRadioSignal.RSRPSubInterval = 0;
+                gRBUSSubListSt.stRadioSignal.RSRPLapsedCounterTimer = 0;
+            }
+            CcspTraceInfo(("%s-%d : RSRP UnSub(%d) \n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.RSRPSubFlag));
         }
     }
-    else if(strstr(eventName, ".X_RDK_RadioSignal.Rsrq"))
+    else if(strstr(eventName, ".RSRQ"))
     {
         if (action == RBUS_EVENT_ACTION_SUBSCRIBE)
         {
+            if( 0 == gRBUSSubListSt.stRadioSignal.RSRQSubFlag )
+            {
+                gRBUSSubListSt.stRadioSignal.RSRQLapsedCounterTimer = 0;
+            }
+
             gRBUSSubListSt.stRadioSignal.RSRQSubFlag++;
-            CcspTraceInfo(("%s-%d : Rsrq Sub(%d) \n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.RSRQSubFlag));
+            gRBUSSubListSt.stRadioSignal.RSRQSubInterval = 0;
+            if( interval > 0 )
+            {
+                gRBUSSubListSt.stRadioSignal.RSRQSubInterval = RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL;
+                if( 0 == ( interval % RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL ) )
+                {
+                    gRBUSSubListSt.stRadioSignal.RSRQSubInterval = interval;
+                }
+            }
+            CcspTraceInfo(("%s-%d : RSRQ Sub(%d) Interval(%d)\n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.RSRQSubFlag,gRBUSSubListSt.stRadioSignal.RSRQSubInterval));
         }
         else
         {
             if (gRBUSSubListSt.stRadioSignal.RSRQSubFlag)
+            {
                 gRBUSSubListSt.stRadioSignal.RSRQSubFlag--;
-            CcspTraceInfo(("%s-%d : Rsrq UnSub(%d) \n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.RSRQSubFlag));
+            }
+            else
+            {
+                gRBUSSubListSt.stRadioSignal.RSRQSubInterval = 0;
+                gRBUSSubListSt.stRadioSignal.RSRQLapsedCounterTimer = 0;
+            }
+            CcspTraceInfo(("%s-%d : RSRQ UnSub(%d) \n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.RSRQSubFlag));
         }
     }
-    else if(strstr(eventName, ".X_RDK_RadioSignal.Trx"))
+    else if(strstr(eventName, ".X_RDK_TRX"))
     {
         if (action == RBUS_EVENT_ACTION_SUBSCRIBE)
         {
+            if( 0 == gRBUSSubListSt.stRadioSignal.TRXSubFlag )
+            {
+                gRBUSSubListSt.stRadioSignal.TRXLapsedCounterTimer = 0;
+            }
+
             gRBUSSubListSt.stRadioSignal.TRXSubFlag++;
-            CcspTraceInfo(("%s-%d : Trx Sub(%d) \n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.TRXSubFlag));
+            gRBUSSubListSt.stRadioSignal.TRXSubInterval = 0;
+            if( interval > 0 )
+            {
+                gRBUSSubListSt.stRadioSignal.TRXSubInterval = RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL;
+                if( 0 == ( interval % RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL ) )
+                {
+                    gRBUSSubListSt.stRadioSignal.TRXSubInterval = interval;
+                }
+            }
+            CcspTraceInfo(("%s-%d : X_RDK_TRX Sub(%d) Interval(%d)\n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.TRXSubFlag,gRBUSSubListSt.stRadioSignal.TRXSubInterval));
         }
         else
         {
             if (gRBUSSubListSt.stRadioSignal.TRXSubFlag)
+            {
                 gRBUSSubListSt.stRadioSignal.TRXSubFlag--;
-            CcspTraceInfo(("%s-%d : Trx UnSub(%d) \n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.TRXSubFlag));
+            }
+            else
+            {
+                gRBUSSubListSt.stRadioSignal.TRXSubInterval = 0;
+                gRBUSSubListSt.stRadioSignal.TRXLapsedCounterTimer = 0;
+            }
+            CcspTraceInfo(("%s-%d : X_RDK_TRX UnSub(%d) \n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.TRXSubFlag));
         }
     }
     else if(strstr(eventName, ".Status"))
