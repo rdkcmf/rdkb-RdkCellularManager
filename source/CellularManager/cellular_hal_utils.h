@@ -36,6 +36,9 @@
                                                 fp = fopen ( CELLULAR_HAL_LOG_FILE, "a+");\
                                                 if (fp)\
                                                 {\
+                                                    char buf[128] = {0};\
+                                                    cellular_hal_util_PrintTime(buf,sizeof(buf));\
+                                                    fprintf(fp,buf);\
                                                     fprintf(fp,fmt);\
                                                     fclose(fp);\
                                                 }\

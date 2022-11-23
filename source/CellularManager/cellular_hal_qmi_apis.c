@@ -65,6 +65,7 @@ typedef enum {
     MODEM_OPEN_STATE_GET_REVISION,
     MODEM_OPEN_STATE_GET_VERSION,
     MODEM_OPEN_STATE_GET_IMEI,
+    MODEM_OPEN_STATE_GET_OPERATING_MODE,
     MODEM_OPEN_STATE_WDS_OPEN,
     MODEM_OPEN_STATE_GET_CAPABILITIES,
     MODEM_OPEN_STATE_NAS_OPEN,
@@ -79,6 +80,7 @@ typedef struct
     ModemOpenState_t                    uiCurrentStep; 
     CellularDeviceContextCBStruct       stDeviceCtxCB;
     CellularDeviceOpenStatus_t          enOpenStatus;
+    CellularModemOperatingConfiguration_t modem_operating_mode;
     void*                               vpPrivateData;                        
 } ContextDeviceOpen;
 
@@ -591,7 +593,6 @@ static void  cellular_hal_qmi_device_open (QmiDevice *device, GAsyncResult *resu
 {
     GError *error = NULL;
     const gchar *wwan_ifacename;
-    cellular_device_open_status_api_callback device_open_status_cb = NULL;
     CellularDeviceOpenStatus_t enOpenStatus;
     GTask                      *task           = (GTask*)user_data;
     QMIContextStructPrivate    *pstQMIContext  = NULL;
@@ -601,7 +602,6 @@ static void  cellular_hal_qmi_device_open (QmiDevice *device, GAsyncResult *resu
     pDeviceOpenCtx  = g_task_get_task_data (task);
     pstQMIContext   = (QMIContextStructPrivate*)pDeviceOpenCtx->vpPrivateData;
     pstDeviceCtxCB  = &(pDeviceOpenCtx->stDeviceCtxCB);
-    device_open_status_cb = pstDeviceCtxCB->device_open_status_cb;
 
     if (!qmi_device_open_finish (device, result, &error)) {
         CELLULAR_HAL_DBG_PRINT ("%s %d Failed open the Device: %s\n", __FUNCTION__, __LINE__, error->message);
@@ -756,7 +756,7 @@ static void cellular_hal_qmi_device_indication_cb (QmiDevice *device, gpointer  
     if( NULL != device_open_status_cb )
     {
         CELLULAR_HAL_DBG_PRINT("%s - QMI(%s) ready and sending status via CB\n", __FUNCTION__, gpstQMIContext->modem_device_name);
-        device_open_status_cb( gpstQMIContext->modem_device_name, gpstQMIContext->wwan_iface, DEVICE_OPEN_STATUS_READY );
+        device_open_status_cb( gpstQMIContext->modem_device_name, gpstQMIContext->wwan_iface, DEVICE_OPEN_STATUS_NOT_READY, CELLULAR_MODEM_SET_OFFLINE );
     }
 }
 
@@ -1241,8 +1241,8 @@ NEXTSTEP:
 
 static void
 cellular_hal_qmi_get_software_version (QmiClientDms *client,
-                                             GAsyncResult *res,
-                                             gpointer  user_data)
+                                       GAsyncResult *result,
+                                       gpointer  user_data)
 {
     QmiMessageDmsGetSoftwareVersionOutput *output;
     GError *error = NULL;
@@ -1256,7 +1256,7 @@ cellular_hal_qmi_get_software_version (QmiClientDms *client,
     pstQMIContext   = (QMIContextStructPrivate*)pDeviceOpenCtx->vpPrivateData;
     dmsCtx          = &(pstQMIContext->dmsCtx);
 
-    output = qmi_client_dms_get_software_version_finish (client, res, &error);
+    output = qmi_client_dms_get_software_version_finish (client, result, &error);
     if (!output) {
         CELLULAR_HAL_DBG_PRINT("Failed to fetch software version: %s\n", error->message);
         g_error_free (error);
@@ -1279,6 +1279,50 @@ cellular_hal_qmi_get_software_version (QmiClientDms *client,
     snprintf(dmsCtx->FirmwareVersion, sizeof(dmsCtx->FirmwareVersion), "%s", version);
 
     qmi_message_dms_get_software_version_output_unref (output);
+
+NEXTSTEP:
+    pDeviceOpenCtx->uiCurrentStep++;
+    cellular_hal_qmi_device_open_step(task);
+}
+
+static void cellular_hal_qmi_get_operating_mode_configuration_cb (QmiClientDms *dmsClient,
+                                                                  GAsyncResult *result,
+                                                                  gpointer  user_data)
+{
+    QmiMessageDmsGetOperatingModeOutput *output;
+    QmiDmsOperatingMode operating_mode;
+    GError *error = NULL;
+    GTask        *task  = (GTask *)user_data;
+    QMIContextStructPrivate    *pstQMIContext   = NULL;
+    ContextDeviceOpen          *pDeviceOpenCtx  = NULL;
+    ContextDMSInfo             *dmsCtx          = NULL;
+
+    pDeviceOpenCtx  = g_task_get_task_data (task);
+    pstQMIContext   = (QMIContextStructPrivate*)pDeviceOpenCtx->vpPrivateData;
+    dmsCtx          = &(pstQMIContext->dmsCtx);
+
+    pDeviceOpenCtx->modem_operating_mode = QMI_DMS_OPERATING_MODE_OFFLINE;
+
+    output = qmi_client_dms_get_operating_mode_finish (dmsClient, result, &error);
+    if (!output) {
+        CELLULAR_HAL_DBG_PRINT("%s Get Modem Operating Mode Operation is failed %s\n",__FUNCTION__,error->message);
+        g_error_free (error);
+        goto NEXTSTEP;
+    }
+
+    if (!qmi_message_dms_get_operating_mode_output_get_result (output, &error)) {
+        CELLULAR_HAL_DBG_PRINT("%s Failed to get Modem Mode %s\n",__FUNCTION__,error->message);
+        g_error_free (error);
+        qmi_message_dms_get_operating_mode_output_unref (output);
+        goto NEXTSTEP;
+    }
+
+    qmi_message_dms_get_operating_mode_output_get_mode (output, &operating_mode, NULL);
+    pDeviceOpenCtx->modem_operating_mode = operating_mode;
+
+    CELLULAR_HAL_DBG_PRINT("[%s] Operating mode is '%s'\n", qmi_device_get_path_display (pstQMIContext->qmiDevice), qmi_dms_operating_mode_get_string (operating_mode));
+
+    qmi_message_dms_get_operating_mode_output_unref (output);
 
 NEXTSTEP:
     pDeviceOpenCtx->uiCurrentStep++;
@@ -1429,6 +1473,18 @@ static void cellular_hal_qmi_device_open_step( GTask *task )
             cellular_hal_qmi_get_modem_identification_info( pstCtxGetIDs );
             return;
         }
+        case MODEM_OPEN_STATE_GET_OPERATING_MODE:
+        {
+	    ContextDMSInfo  *dmsCtx  = &(pstQMIContext->dmsCtx);
+
+            qmi_client_dms_get_operating_mode ( QMI_CLIENT_DMS(dmsCtx->dmsClient),
+                                                NULL,
+                                                10,
+                                                NULL,
+                                                (GAsyncReadyCallback)cellular_hal_qmi_get_operating_mode_configuration_cb,
+                                                task);
+            return;
+        }
         case MODEM_OPEN_STATE_WDS_OPEN:
         {
             ContextWDSInfo  *wdsCtx = &(pstQMIContext->wdsCtx);
@@ -1491,7 +1547,10 @@ static void cellular_hal_qmi_device_open_step( GTask *task )
         }
         case MODEM_OPEN_STATE_NAS_NETWORK_SCAN_INIT:
         {
+/* Fix this in future: Commenting scan for now since we are facing Modem slowness issue and will come up with efficient method of scan */
+#if 0
             cellular_hal_qmi_network_scan_data_collection_task();
+#endif
             pDeviceOpenCtx->uiCurrentStep++;
             /* fall through */
         }
@@ -1505,7 +1564,9 @@ static void cellular_hal_qmi_device_open_step( GTask *task )
             if( NULL != pstDeviceCtxCB->device_open_status_cb )
             {
                 CELLULAR_HAL_DBG_PRINT("%s - QMI(%s) %s and sending status via CB\n", __FUNCTION__, pstQMIContext->modem_device_name, ( pDeviceOpenCtx->enOpenStatus == DEVICE_OPEN_STATUS_READY ) ? "ready" : "not ready");
-                pstDeviceCtxCB->device_open_status_cb( pstQMIContext->modem_device_name, ( DEVICE_OPEN_STATUS_READY == pDeviceOpenCtx->enOpenStatus ) ?  pstQMIContext->wwan_iface : "Unknown", pDeviceOpenCtx->enOpenStatus );
+                pstDeviceCtxCB->device_open_status_cb( pstQMIContext->modem_device_name, 
+                                                       ( DEVICE_OPEN_STATUS_READY == pDeviceOpenCtx->enOpenStatus ) ?  pstQMIContext->wwan_iface : "Unknown", pDeviceOpenCtx->enOpenStatus,
+                                                       ( QMI_DMS_OPERATING_MODE_ONLINE == pDeviceOpenCtx->modem_operating_mode ) ? CELLULAR_MODEM_SET_ONLINE : CELLULAR_MODEM_SET_OFFLINE );
             }
 
             pDeviceOpenCtx->uiCurrentStep++;
@@ -1565,7 +1626,7 @@ int cellular_hal_qmi_open_device(CellularDeviceContextCBStruct *pstDeviceCtxCB)
         if( ( NULL != pstDeviceCtxCB ) && (NULL != pstDeviceCtxCB->device_open_status_cb ) )
         {
             CELLULAR_HAL_DBG_PRINT("%s - QMI(%s) not ready and sending status via CB\n", __FUNCTION__, gpstQMIContext->modem_device_name);
-            pstDeviceCtxCB->device_open_status_cb( gpstQMIContext->modem_device_name, "unknown", DEVICE_OPEN_STATUS_NOT_READY );
+            pstDeviceCtxCB->device_open_status_cb( gpstQMIContext->modem_device_name, "unknown", DEVICE_OPEN_STATUS_NOT_READY, CELLULAR_MODEM_SET_OFFLINE );
         }
     }
 
@@ -3493,7 +3554,7 @@ static void cellular_hal_qmi_network_scan_data_collection_step( GTask *task )
         {
             ContextNASInfo   *nasCtx = &(pstQMIContext->nasCtx);
 
-            while( 1 )
+            while( ( FALSE == pstQMIContext->IsDeviceRemovedSignalReceived ) && ( FALSE == nasCtx->bIsNeed2StopNetworkInfoCollection ) )
             {
                 //Sleep for certain time for collection
                 sleep(CELLULAR_QMI_NETWORKSCAN_COLLECTION_PERIODIC_INTERVAL);

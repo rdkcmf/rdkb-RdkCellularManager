@@ -66,3 +66,13 @@ int cellular_hal_util_GetUptime(unsigned long *time)
    
    return 0;
 }
+
+/* cellular_hal_util_PrintTime() */
+void cellular_hal_util_PrintTime(char *time_value, int length) 
+{
+    time_t timer;
+    struct tm* tm_info;
+    time(&timer);
+    tm_info = localtime(&timer);
+    strftime(time_value, length, "%Y-%m-%d %H:%M:%S ", tm_info);
+}

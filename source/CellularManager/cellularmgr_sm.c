@@ -80,6 +80,7 @@ typedef  struct
     CellularNetworkPacketStatus_t             enNetworkIPv6PacketServiceStatus;
     unsigned char                             bIPv6WaitingForPacketStatus;
     PCELLULAR_INTERFACE_INFO                  pCmIfData;
+    PCELLULAR_DML_INFO                        pstDmlCellular; 
 
 } CellularMgrPolicyCtrlSMStruct;
 
@@ -137,7 +138,7 @@ int CellularMgrDeviceRemovedStatusCBForSM(char *device_name, CellularDeviceDetec
     return RETURN_OK;
 }
 
-int CellularMgrDeviceOpenStatusCBForSM(char *device_name, char *wan_ifname, CellularDeviceOpenStatus_t device_open_status )
+int CellularMgrDeviceOpenStatusCBForSM(char *device_name, char *wan_ifname, CellularDeviceOpenStatus_t device_open_status, CellularModemOperatingConfiguration_t modem_operating_mode )
 {   
     if( ( NULL == device_name ) || ( NULL == wan_ifname ) )
     {
@@ -151,14 +152,29 @@ int CellularMgrDeviceOpenStatusCBForSM(char *device_name, char *wan_ifname, Cell
         return RETURN_ERROR;
     }
 
-    CcspTraceInfo(("%s - Received Device Open Status - DeviceName[%s] Status[%d] Wwan[%s]\n", __FUNCTION__, device_name, device_open_status, wan_ifname));
-
     gpstCellularPolicyCtrl->enDeviceOpenStatus = device_open_status;
     memset(gpstCellularPolicyCtrl->acDeviceName, 0, sizeof(gpstCellularPolicyCtrl->acDeviceName));
     snprintf(gpstCellularPolicyCtrl->acDeviceName, sizeof(gpstCellularPolicyCtrl->acDeviceName), "%s", device_name);
 
     memset(gpstCellularPolicyCtrl->acWANIfName, 0, sizeof(gpstCellularPolicyCtrl->acWANIfName));
     snprintf(gpstCellularPolicyCtrl->acWANIfName, sizeof(gpstCellularPolicyCtrl->acWANIfName), "%s", wan_ifname);
+
+    if( CELLULAR_MODEM_SET_ONLINE == modem_operating_mode )
+    {
+        PCELLULAR_DML_INFO  pstDmlCellular = gpstCellularPolicyCtrl->pstDmlCellular; 
+
+        CellularMgrSMSetCellularEnable(TRUE);
+        pstDmlCellular->X_RDK_Enable = TRUE;
+    }
+    else
+    {
+        PCELLULAR_DML_INFO  pstDmlCellular = gpstCellularPolicyCtrl->pstDmlCellular; 
+
+        CellularMgrSMSetCellularEnable(FALSE);
+        pstDmlCellular->X_RDK_Enable = FALSE;
+    }
+
+    CcspTraceInfo(("%s - Received Device Open Status - DeviceName[%s] Status[%d] Wwan[%s] IsModemOnline[%d]\n", __FUNCTION__, device_name, device_open_status, wan_ifname, CellularMgrSMGetCellularEnable()));
 
     return RETURN_OK;
 }
@@ -1122,6 +1138,7 @@ static ANSC_STATUS CellularMgr_ControllerInit( CellularMgrSMInputStruct    *pstI
         memcpy(&gpstCellularPolicyCtrl->stContextProfile, &pstInput->stContextProfile, sizeof(CellularProfileStruct));
         gpstCellularPolicyCtrl->bRDKEnable = pstInput->bModemEnable;
         gpstCellularPolicyCtrl->pCmIfData  = pstInput->pCmIfData;
+        gpstCellularPolicyCtrl->pstDmlCellular = pstInput->pstDmlCellular;
 
         retStatus = ANSC_STATUS_SUCCESS;
     }

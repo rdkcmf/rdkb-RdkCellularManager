@@ -427,7 +427,7 @@ cellular_hal_init
 * @retval RETURN_ERR if any error is detected
 *
 */
-typedef int (*cellular_device_open_status_api_callback)( char *device_name, char *wan_ifname, CellularDeviceOpenStatus_t device_open_status );
+typedef int (*cellular_device_open_status_api_callback)( char *device_name, char *wan_ifname, CellularDeviceOpenStatus_t device_open_status, CellularModemOperatingConfiguration_t modem_operating_mode );
 
 /* cellular_device_removed_status_api_callback function */
 /**

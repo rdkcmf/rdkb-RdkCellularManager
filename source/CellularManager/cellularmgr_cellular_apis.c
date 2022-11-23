@@ -329,7 +329,7 @@ ANSC_STATUS DmlCellularInitialize ( ANSC_HANDLE  hDml )
     /*
      * Initialize Interface DML
     */
-    pstDmlCellular->X_RDK_Enable                 = TRUE;
+    pstDmlCellular->X_RDK_Enable                 = FALSE;
     pstDmlCellular->X_RDK_Status                 = RDK_STATUS_DOWN;
     pstDmlCellular->X_RDK_ControlInterfaceStatus = CONTROL_STATUS_CLOSED;
     pstDmlCellular->X_RDK_DataInterfaceLink      = DATA_INTERFACE_LINK_RAW_IP;
@@ -418,6 +418,7 @@ ANSC_STATUS DmlCellularInitialize ( ANSC_HANDLE  hDml )
     //Start Cellular Manager SM
     stStateMachineInput.bModemEnable = pstDmlCellular->X_RDK_Enable;
     stStateMachineInput.pCmIfData = &(pMyObject->pstDmlCellular->pstInterfaceInfo[0]);
+    stStateMachineInput.pstDmlCellular = pstDmlCellular;
     memcpy(&(stStateMachineInput.stContextProfile), &(stCtxInputStruct.stIfInput), sizeof(CellularProfileStruct));
     CellularMgr_Start_State_Machine( &stStateMachineInput );
 
@@ -1302,4 +1303,3 @@ BOOL CellularMgr_BlobUnpack(char* blob)
     }
     return TRUE;
 }
-

@@ -47,6 +47,7 @@ typedef  struct
     unsigned char                  bModemEnable;                   //Needs to pass modem state
     CellularProfileStruct          stContextProfile;               //This profile information used to start network
     PCELLULAR_INTERFACE_INFO       pCmIfData;                      //This is actual interface data
+    PCELLULAR_DML_INFO             pstDmlCellular;                 //This is actual cellular DML info struct data
 } 
 CellularMgrSMInputStruct;
 
