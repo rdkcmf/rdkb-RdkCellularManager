@@ -32,9 +32,6 @@
  * limitations under the License.
 */
 
-#include "ccsp_trace.h"
-#include "msgpack.h"
-#include "base64.h"
 #include "cellularmgr_plugin_main_apis.h"
 #include "cellularmgr_cellular_internal.h"
 #include "cellularmgr_cellular_apis.h"
@@ -42,7 +39,6 @@
 #include "cellularmgr_cellular_dml.h"
 #include "cellularmgr_global.h"
 #include "cellularmgr_utils.h"
-#include "cellularmgr_cellular_webconfig_api.h"
 
 extern PBACKEND_MANAGER_OBJECT               g_pBEManager;
 
@@ -375,146 +371,14 @@ Cellular_SetParamStringValue
 
     if( AnscEqualString(ParamName, "CellularConfig", TRUE))
     {
-            CcspTraceInfo(("---------------start of b64 decode--------------\n"));
-
-            char * decodeMsg =NULL;
-            int decodeMsgSize =0;
-            int size =0;
-            int err;
-            //int i=0;
-	    //int j=0;
-	    //int k=0;
-
-            msgpack_zone mempool;
-            msgpack_object deserialized;
-            msgpack_unpack_return unpack_ret;
-
-            decodeMsgSize = b64_get_decoded_buffer_size(strlen(pString));
-
-            decodeMsg = (char *) malloc(sizeof(char) * decodeMsgSize);
-
-            size = b64_decode( pString, strlen(pString), decodeMsg );
-            CcspTraceInfo(("base64 decoded data contains %d bytes\n",size));
-
-            msgpack_zone_init(&mempool, 2048);
-            unpack_ret = msgpack_unpack(decodeMsg, size, NULL, &mempool, &deserialized);
-
-            switch(unpack_ret)
-            {
-                case MSGPACK_UNPACK_SUCCESS:
-                    CcspTraceInfo(("MSGPACK_UNPACK_SUCCESS :%d\n",unpack_ret));
-                    break;
-                case MSGPACK_UNPACK_EXTRA_BYTES:
-                    CcspTraceWarning(("MSGPACK_UNPACK_EXTRA_BYTES :%d\n",unpack_ret));
-                    break;
-                case MSGPACK_UNPACK_CONTINUE:
-                    CcspTraceWarning(("MSGPACK_UNPACK_CONTINUE :%d\n",unpack_ret));
-                    break;
-                case MSGPACK_UNPACK_PARSE_ERROR:
-                    CcspTraceWarning(("MSGPACK_UNPACK_PARSE_ERROR :%d\n",unpack_ret));
-                    break;
-                case MSGPACK_UNPACK_NOMEM_ERROR:
-                    CcspTraceWarning(("MSGPACK_UNPACK_NOMEM_ERROR :%d\n",unpack_ret));
-                    break;
-                default:
-                    CcspTraceWarning(("Message Pack decode failed with error: %d\n", unpack_ret));
-            }
-
-            msgpack_zone_destroy(&mempool);
-            //End of msgpack decoding
-            CcspTraceInfo(("---------------End of b64 decode--------------\n"));
-
-            if(unpack_ret == MSGPACK_UNPACK_SUCCESS)
-            {
-                celldoc_t *cd;
-                cd = celldoc_convert( decodeMsg, size+1 );
-                err = errno;
-                CcspTraceError(( "errno: %s\n", celldoc_strerror(err) ));
-
-                if ( decodeMsg )
-                {
-                    free(decodeMsg);
-                    decodeMsg = NULL;
-                }
-
-                if (NULL !=cd)
-                {
-                    CcspTraceInfo(("Subdoc_Name : %s\n", cd->subdoc_name));
-                    CcspTraceInfo(("Version : %lu\n", (long)cd->version));
-                    CcspTraceInfo(("Transaction_Id : %lu\n",(long) cd->transaction_id));
-                    CcspTraceInfo(("CellularModemEnable : %s\n", (1 == cd->param->cellular_modem_enable)?"true":"false"));
-/*
-                    CcspTraceWarning(("cd->table_param->entries_count %d\n",(int) cd->table_param->entries_count));
-
-                    for(i = 0; i < (int)cd->table_param->entries_count ; i++)
-                    {
-			CcspTraceWarning(("cd->table_param->entries[%d].mno_name  %s\n",i, cd->table_param->entries[i].mno_name ));
-			CcspTraceWarning(("cd->table_param->entries[%d].mno_enable %s\n",i, (1 == cd->table_param->entries[i].mno_enable)?"true":"false"));
-			CcspTraceWarning(("cd->table_param->entries[%d].mno_iccid  %s\n",i, cd->table_param->entries[i].mno_iccid));
-		    }
-
-		    CcspTraceWarning(("cd->table_param1->entries_count %d\n",(int) cd->table_param1->entries_count));
-	
-		    for(j =0; j< (int) cd->table_param1->entries_count; j++)
-		    {
-			CcspTraceWarning(("cd->table_param1->entries[%d].int_enable : %s\n",j, (1 == cd->table_param1->entries[j].int_enable)?"true":"false"));
-			CcspTraceWarning(("cd->table_param1->entries[%d].int_roaming_enable : %s\n",j, (1 == cd->table_param1->entries[j].int_roaming_enable)?"true":"false"));
-		    }
-
-		    CcspTraceWarning(("cd->table_param2->entries_count %d\n",(int) cd->table_param2->entries_count));
-	
-		    for(k =0; k< (int) cd->table_param2->entries_count; k++)
-		    {
-			CcspTraceWarning(("cd->table_param2->entries[%d].access_mno_name : %s\n",k, cd->table_param2->entries[k].access_mno_name));
-			CcspTraceWarning(("cd->table_param2->entries[%d].access_enable : %s\n",k, (1 == cd->table_param2->entries[k].access_enable)?"true":"false"));
-			CcspTraceWarning(("cd->table_param2->entries[%d].access_roaming_enable : %s\n",k, (1 == cd->table_param2->entries[k].access_roaming_enable)?"true":"false"));
-			CcspTraceWarning(("cd->table_param2->entries[%d].access_apn : %s\n",k, cd->table_param2->entries[k].access_apn));
-			CcspTraceWarning(("cd->table_param2->entries[%d].access_apnauthentication : %s\n",k, cd->table_param2->entries[k].access_apnauthentication));
-			CcspTraceWarning(("cd->table_param2->entries[%d].access_ipaddressfamily : %s\n",k, cd->table_param2->entries[k].access_ipaddressfamily));
-		    }
- */
-
-		   execData *execDatacell = NULL ;
-		   execDatacell = (execData*) malloc (sizeof(execData));
-		   if ( execDatacell != NULL )
-		   {
-			memset(execDatacell, 0, sizeof(execData));
-
-			execDatacell->txid = cd->transaction_id;
-			execDatacell->version = cd->version;
-			execDatacell->numOfEntries = 0;
-
-			strncpy(execDatacell->subdoc_name,"cellularconfig",sizeof(execDatacell->subdoc_name)-1);
-
-			execDatacell->user_data = (void*) cd ;
-			execDatacell->calcTimeout = NULL ;
-			execDatacell->executeBlobRequest = Process_Cellularmgr_WebConfigRequest;
-			execDatacell->rollbackFunc = NULL ;
-			execDatacell->freeResources = freeResources_CELL ;
-			PushBlobRequest(execDatacell);
-			CcspTraceInfo(("PushBlobRequest Complete\n"));
-			return TRUE;
-		   }
-		   else
-		   {
-			CcspTraceError(("execData memory allocation failed\n"));
-			celldoc_destroy( cd );
-
-			return FALSE;
-		   }
-
-	        } 
-                return TRUE;
+        if( CellularMgr_BlobUnpack( pString))
+        {
+            CcspTraceInfo(("Data Received from WebConfig\n"))
+            return TRUE;
         }
         else
         {
-                if ( decodeMsg )
-                {
-                    free(decodeMsg);
-                    decodeMsg = NULL;
-                }
-                CcspTraceError(("Corrupted cellular modem enable msgpack value\n"));
-                return FALSE;
+            return FALSE;
         }
     }
     return TRUE;

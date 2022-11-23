@@ -409,6 +409,7 @@ static rbusError_t Cellular_GetParamStringValue_rbus(rbusHandle_t handle, rbusPr
     }
     else if(strcmp(context.name, "CellularConfig") == 0)
     {
+        CcspTraceInfo(("%s-%d : Data Get Not supported\n",__FUNCTION__, __LINE__));
         rbusProperty_SetString(property, "None");
     }
     else
@@ -416,6 +417,34 @@ static rbusError_t Cellular_GetParamStringValue_rbus(rbusHandle_t handle, rbusPr
         return RBUS_ERROR_INVALID_INPUT;
     }
 
+    return RBUS_ERROR_SUCCESS;
+}
+
+rbusError_t Cellular_SetParamStringValue_rbus(rbusHandle_t handle, rbusProperty_t property, rbusSetHandlerOptions_t* opts)
+{
+    HandlerContext context = GetPropertyContext(property);
+    PCELLULARMGR_CELLULAR_DATA  pMyObject      =  (PCELLULARMGR_CELLULAR_DATA) g_pBEManager->hCellular;
+    PCELLULAR_DML_INFO          pstDmlCellular =  (PCELLULAR_DML_INFO) pMyObject->pstDmlCellular;
+
+    if (pstDmlCellular == NULL)
+    {
+        return RBUS_ERROR_BUS_ERROR;
+    }
+    if(strcmp(context.name, "CellularConfig") == 0)
+    {
+        const char* val;
+        rbusValueError_t verr = rbusProperty_GetStringEx(property, &val, NULL);
+        if(verr != RBUS_VALUE_ERROR_SUCCESS)
+            return RBUS_ERROR_INVALID_INPUT;
+
+        CcspTraceInfo(("%s-%d : Data Received from WebConfig\n",__FUNCTION__, __LINE__));
+        CellularMgr_BlobUnpack(val);
+        /*context.userData is this objects data and val is the property's new value*/
+    }
+    else
+    {
+        return RBUS_ERROR_INVALID_INPUT;
+    }
     return RBUS_ERROR_SUCCESS;
 }
 
@@ -3075,7 +3104,7 @@ rbusError_t registerGeneratedDataElements(rbusHandle_t handle)
         {"Device.Cellular.X_RDK_ControlInterfaceStatus", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.X_RDK_DataInterface", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.X_RDK_DataInterfaceLink", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
-        {"Device.Cellular.CellularConfig", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
+        {"Device.Cellular.CellularConfig", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_GetParamStringValue_rbus, Cellular_SetParamStringValue_rbus, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.X_RDK_DeviceManagement.Imei", RBUS_ELEMENT_TYPE_PROPERTY, {DeviceManagement_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
 
         {"Device.Cellular.X_RDK_Firmware.CurrentImageVersion", RBUS_ELEMENT_TYPE_PROPERTY, {Firmware_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},

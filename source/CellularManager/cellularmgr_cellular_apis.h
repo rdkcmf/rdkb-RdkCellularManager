@@ -440,4 +440,6 @@ int CellularMgr_GetPlmnInformation( PCELLULAR_PLMNACCESS_INFO pstPlmnAccessInfo)
 
 int CellularMgr_GetAvailableNetworksInformation( PCELLULAR_PLMN_AVAILABLENETWORK_INFO *ppAvailableNetworkInfo, unsigned int *puiTotalCount );
 
+BOOL CellularMgr_BlobUnpack(char* blob);
+
 #endif //_CELLULARMGR_CELLULAR_APIS_H_

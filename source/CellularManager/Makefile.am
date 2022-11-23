@@ -40,5 +40,5 @@ cellularmanager_DEPENDENCIES= \
 
 cellularmanager_CFLAGS = $(SYSTEMD_CFLAGS) $(NONROOT_CFLAGS)
 cellularmanager_SOURCES = cellularmgr_sm.c cellularmgr_cellular_apis.c cellularmgr_cellular_internal.c cellularmgr_ssp_action.c cellularmgr_ssp_internal.h cellularmgr_main.c cellularmgr_messagebus_interface.c cellular_hal_utils.c cellular_hal_qmi_apis.c cellular_hal.c cellularmgr_bus_utils.c dm_pack_datamodel.c
-cellularmanager_LDFLAGS = -lccsp_common -ldl $(SYSTEMD_LDFLAGS) -lrdkloggers -lsyscfg -lnanomsg -lsysevent -lwebconfig_framework -lsecure_wrapper
+cellularmanager_LDFLAGS = -lccsp_common -ldl $(SYSTEMD_LDFLAGS) -lrdkloggers -lsyscfg -lnanomsg -lsysevent -lwebconfig_framework -lsecure_wrapper -lmsgpackc -lcurl -ltrower-base64
 cellularmanager_LDADD =  $(cellularmanager_DEPENDENCIES)
