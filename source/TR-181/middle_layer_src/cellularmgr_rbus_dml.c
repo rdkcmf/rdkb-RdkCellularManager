@@ -2602,15 +2602,44 @@ void* Cellular_AccessPoint_Add(void* ctx, uint32_t* instNum)
 
     //Assign new memory to actual structure
     pstDmlCellular->ulAccessPointNoOfEntries = ulTotalCount;
-    pstProfileInfo[ulTotalCount - 1].bIsThisNewlyAddedRecord = TRUE;
     pstProfileInfo[ulTotalCount - 1].X_RDK_Roaming = TRUE;
+
+    //Find first available index
+    *instNum = -1;
+    for(int i = 1; i < ulTotalCount; i++)
+    {
+        bool indexFound = false;
+        for(int j = 0 ; j < (ulTotalCount -1); j++)
+        {
+            if(pstProfileInfo[j].PDPContextNumber == i)
+            {
+                indexFound = true;
+                break;
+            }
+        }
+        if(!indexFound)
+        {
+            *instNum = i;
+            break;
+        }
+    }
+
+    if(*instNum == -1)
+    {
+        *instNum = ulTotalCount;
+    }
+    
+    pstProfileInfo[ulTotalCount - 1].PDPContextNumber = *instNum;
     pstDmlCellular->pstAPInfo = pstProfileInfo;
-    *instNum = pstDmlCellular->ulAccessPointNoOfEntries;
 
     //Needs to update current time during add since new profile can be updated withing TTL threshold
-    pstDmlCellular->ulAccessPointListLastUpdatedTime =  AnscGetTickInSeconds();
+    pstDmlCellular->ulAccessPointListLastUpdatedTime = 0;
 
-    CcspTraceInfo(("%s-%d : Added AccessPoint(%d) Successfully\n",__FUNCTION__, __LINE__, ulTotalCount));
+    /* Set a unique APN value to avoid Access Point creation failure due to duplicate profile */
+    snprintf(pstProfileInfo[ulTotalCount - 1].APN, sizeof(pstProfileInfo[ulTotalCount - 1].APN), "APN_%d", pstProfileInfo[ulTotalCount - 1].PDPContextNumber);
+    CellularMgr_AccessPointCreateProfile( &pstProfileInfo[ulTotalCount - 1] );
+
+    CcspTraceInfo(("%s-%d : Added AccessPoint(%d) Successfully \n",__FUNCTION__, __LINE__, *instNum));
     return ((ANSC_HANDLE)&(pstDmlCellular->pstAPInfo[pstDmlCellular->ulAccessPointNoOfEntries - 1]));
 }
 
@@ -2719,14 +2748,14 @@ rbusError_t Cellular_AccessPoint_Synchronize_rbus(void* ctx)
         {
             CELLULAR_INTERFACE_ACCESSPOINT_INFO  *pstAPInfo = &(pstDmlCellular->pstAPInfo[j]);
 
-            if (Sample_RegisterRow(CELLULARMGR_ACCESSPOINT_TABLE, (j+1), NULL, pstAPInfo) == RBUS_ERROR_SUCCESS)
+            if (Sample_RegisterRow(CELLULARMGR_ACCESSPOINT_TABLE, pstAPInfo->PDPContextNumber, NULL, pstAPInfo) == RBUS_ERROR_SUCCESS)
             {
-                CcspTraceInfo(("%s-%d : Add AccessPoint Table:Inst(%s%d) \n", __FUNCTION__, __LINE__, CELLULARMGR_ACCESSPOINT_TABLE, (j+1)));
+                CcspTraceInfo(("%s-%d : Add AccessPoint Table:Inst(%s%d) \n", __FUNCTION__, __LINE__, CELLULARMGR_ACCESSPOINT_TABLE,pstAPInfo->PDPContextNumber));
             }
             else
             {
-                CcspTraceInfo(("%s-%d : tableName(%s), Inst(%d) \n",__FUNCTION__, __LINE__, CELLULARMGR_ACCESSPOINT_TABLE, (j+1)));
-                SetRowContext(CELLULARMGR_ACCESSPOINT_TABLE, (j+1), NULL, pstAPInfo);
+                CcspTraceInfo(("%s-%d : tableName(%s), Inst(%d) \n",__FUNCTION__, __LINE__, CELLULARMGR_ACCESSPOINT_TABLE, pstAPInfo->PDPContextNumber));
+                SetRowContext(CELLULARMGR_ACCESSPOINT_TABLE, pstAPInfo->PDPContextNumber, NULL, pstAPInfo);
             }
         }
     }

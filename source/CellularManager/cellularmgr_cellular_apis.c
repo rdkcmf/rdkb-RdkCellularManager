@@ -659,7 +659,7 @@ int CellularMgr_AccessPointCreateProfile( PCELLULAR_INTERFACE_ACCESSPOINT_INFO p
     CellularProfileStruct stProfileInput = { 0 };
 
     stProfileInput.ProfileID                = pstAPInfo->ProfileIndex;
-    stProfileInput.PDPContextNumber         = CELLULAR_PDP_CONTEXT_UNKNOWN;
+    stProfileInput.PDPContextNumber         = pstAPInfo->PDPContextNumber;
     stProfileInput.bIsThisDefaultProfile    = pstAPInfo->X_RDK_Default;
     stProfileInput.bIsAPNDisabled           = ( pstAPInfo->Enable ) ? FALSE : TRUE;
     snprintf(stProfileInput.ProfileName, sizeof(stProfileInput.ProfileName), pstAPInfo->Alias);
