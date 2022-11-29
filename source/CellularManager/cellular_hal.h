@@ -917,4 +917,26 @@ int cellular_hal_get_modem_current_radio_technology( char *current_rat );
 
 int cellular_hal_get_modem_supported_radio_technology ( char *supported_rat );
 
+/* cellular_hal_modem_factory_reset function */
+/**
+* @description - This API to factory reset the modem
+*
+* @return The status of the operation
+* @retval RETURN_OK if successful
+* @retval RETURN_ERR if any error is detected
+*
+*/
+int cellular_hal_modem_factory_reset( void );
+
+/* cellular_hal_modem_reset function */
+/**
+* @description - This API to reset the modem
+*
+* @return The status of the operation
+* @retval RETURN_OK if successful
+* @retval RETURN_ERR if any error is detected
+*
+*/
+int cellular_hal_modem_reset( void );
+
 #endif //_CELLULAR_HAL_H_

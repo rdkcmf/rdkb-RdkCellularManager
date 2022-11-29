@@ -29,7 +29,7 @@ EnvironmentFile=/etc/device.properties
 WorkingDirectory=/usr/rdk/cellularmanager
 ExecStart=/usr/bin/cellularmanager -subsys eRT.
 ExecStop=/bin/sh -c 'echo "`date`: Stopping/Restarting CellularManager" >> ${PROCESS_RESTART_LOG}'
-Restart=on-failure
+Restart=always
 
 StandardOutput=syslog+console
 

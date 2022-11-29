@@ -547,6 +547,61 @@ static rbusError_t DeviceManagement_GetParamStringValue_rbus(rbusHandle_t handle
     return RBUS_ERROR_SUCCESS;
 }
 
+static rbusError_t DeviceManagement_GetParamBoolValue_rbus(rbusHandle_t handle, rbusProperty_t property, rbusGetHandlerOptions_t* opts)
+{
+    HandlerContext context = GetPropertyContext(property);
+    PCELLULARMGR_CELLULAR_DATA  pMyObject      =  (PCELLULARMGR_CELLULAR_DATA) g_pBEManager->hCellular;
+    PCELLULAR_DML_INFO          pstDmlCellular =  (PCELLULAR_DML_INFO) pMyObject->pstDmlCellular;
+
+    if (pstDmlCellular == NULL)
+    {
+        return RBUS_ERROR_BUS_ERROR;
+    }
+
+    if(strcmp(context.name, "FactoryReset") == 0)
+    {
+        rbusProperty_SetBoolean(property, 0);
+    }
+    else
+    {
+        return RBUS_ERROR_INVALID_INPUT;
+    }
+
+    return RBUS_ERROR_SUCCESS;
+}
+
+rbusError_t DeviceManagement_SetParamBoolValue_rbus(rbusHandle_t handle, rbusProperty_t property, rbusSetHandlerOptions_t* opts)
+{
+    HandlerContext context = GetPropertyContext(property);
+    PCELLULARMGR_CELLULAR_DATA  pMyObject      =  (PCELLULARMGR_CELLULAR_DATA) g_pBEManager->hCellular;
+    PCELLULAR_DML_INFO          pstDmlCellular =  (PCELLULAR_DML_INFO) pMyObject->pstDmlCellular;
+
+    if (pstDmlCellular == NULL)
+    {
+        return RBUS_ERROR_BUS_ERROR;
+    }
+
+    if(strcmp(context.name, "FactoryReset") == 0)
+    {
+        bool val;
+
+        rbusValueError_t verr = rbusProperty_GetBooleanEx(property, &val);
+        if(verr != RBUS_VALUE_ERROR_SUCCESS)
+            return RBUS_ERROR_INVALID_INPUT;
+
+        CcspTraceInfo(("%s-%d : Cellular Modem FactoryReset...\n",__FUNCTION__, __LINE__));
+        CellularMgr_FactoryReset();
+
+        /*context.userData is this objects data and val is the property's new value*/
+    }
+    else
+    {
+        return RBUS_ERROR_INVALID_INPUT;
+    }
+
+    return RBUS_ERROR_SUCCESS;
+}
+
 static rbusError_t Firmware_GetParamStringValue_rbus(rbusHandle_t handle, rbusProperty_t property, rbusGetHandlerOptions_t* opts)
 {
     HandlerContext context = GetPropertyContext(property);
@@ -3159,6 +3214,7 @@ rbusError_t registerGeneratedDataElements(rbusHandle_t handle)
         {"Device.Cellular.X_RDK_DataInterfaceLink", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.CellularConfig", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_GetParamStringValue_rbus, Cellular_SetParamStringValue_rbus, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.X_RDK_DeviceManagement.Imei", RBUS_ELEMENT_TYPE_PROPERTY, {DeviceManagement_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
+        {"Device.Cellular.X_RDK_DeviceManagement.FactoryReset", RBUS_ELEMENT_TYPE_PROPERTY, {DeviceManagement_GetParamBoolValue_rbus, DeviceManagement_SetParamBoolValue_rbus, NULL, NULL, NULL, NULL}},
 
         {"Device.Cellular.X_RDK_Firmware.CurrentImageVersion", RBUS_ELEMENT_TYPE_PROPERTY, {Firmware_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.X_RDK_Firmware.FallbackImageVersion", RBUS_ELEMENT_TYPE_PROPERTY, {Firmware_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},

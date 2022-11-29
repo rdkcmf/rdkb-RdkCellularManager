@@ -103,6 +103,8 @@ Cellular_Rollback
     Cellular.X_RDK_DeviceManagement.
 
     *  DeviceManagement_GetParamStringValue
+    *  DeviceManagement_GetParamBoolValue
+    *  DeviceManagement_SetParamBoolValue
 
 ***********************************************************************/
 
@@ -113,6 +115,22 @@ DeviceManagement_GetParamStringValue
         char*                       ParamName,
         char*                       pValue,
         ULONG*                      pUlSize
+    );
+
+BOOL
+DeviceManagement_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    );
+
+BOOL
+DeviceManagement_SetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL                        bValue
     );
 
 /***********************************************************************

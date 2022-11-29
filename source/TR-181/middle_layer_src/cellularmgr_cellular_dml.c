@@ -496,6 +496,8 @@ Cellular_Rollback
     Cellular.X_RDK_DeviceManagement.
 
     *  DeviceManagement_GetParamStringValue
+    *  DeviceManagement_GetParamBoolValue
+    *  DeviceManagement_SetParamBoolValue
 
 ***********************************************************************/
 
@@ -520,6 +522,107 @@ DeviceManagement_GetParamStringValue
     }
 
     return -1;
+}
+
+/**********************************************************************
+    caller:     owner of this object
+
+    prototype:
+        BOOL
+        DeviceManagement_GetParamBoolValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                BOOL*                       pBool
+            );
+
+    description:
+        This function is called to retrieve Boolean parameter value;
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                BOOL*                       pBool
+                The buffer of returned boolean value;
+
+    return:     TRUE if succeeded.
+**********************************************************************/
+BOOL
+DeviceManagement_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    )
+{
+    PCELLULARMGR_CELLULAR_DATA  pMyObject      =  (PCELLULARMGR_CELLULAR_DATA) g_pBEManager->hCellular;
+    PCELLULAR_DML_INFO          pstDmlCellular =  (PCELLULAR_DML_INFO) pMyObject->pstDmlCellular;
+
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "FactoryReset", TRUE))
+    {
+        /* always return false when get */
+        *pBool = FALSE;
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        DeviceManagement_SetParamBoolValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                BOOL                        bValue
+            );
+
+    description:
+
+        This function is called to set BOOL parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                BOOL                        bValue
+                The updated BOOL value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+DeviceManagement_SetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL                        bValue
+    )
+{
+    PCELLULARMGR_CELLULAR_DATA  pMyObject      =  (PCELLULARMGR_CELLULAR_DATA) g_pBEManager->hCellular;
+    PCELLULAR_DML_INFO          pstDmlCellular =  (PCELLULAR_DML_INFO) pMyObject->pstDmlCellular;
+
+    /* check the parameter name and set the corresponding value */
+    if( AnscEqualString(ParamName, "FactoryReset", TRUE))
+    {
+        CcspTraceInfo (("Cellular Modem FactoryReset...\n"));
+        CellularMgr_FactoryReset();
+        return TRUE;
+    }
+
+    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return FALSE;
 }
 
 /***********************************************************************

@@ -19,6 +19,10 @@
 
 #include "cellular_hal_utils.h"
 
+#ifdef _WNXL11BWL_PRODUCT_REQ_
+#include "cellular_modem_hal_api.h"
+#endif
+
 #ifdef QMI_SUPPORT
 #include "cellular_hal_qmi_apis.h"
 #endif
@@ -492,6 +496,34 @@ int cellular_hal_get_modem_supported_radio_technology( char *supported_rat )
 #ifdef QMI_SUPPORT
     //Get Device DMS parameters
     cellular_hal_qmi_get_supported_radio_technology( supported_rat );
+#endif
+
+    return RETURN_OK;
+}
+
+int cellular_hal_modem_factory_reset( void )
+{
+
+#ifdef _WNXL11BWL_PRODUCT_REQ_
+    //Modem Factory Reset operation
+    if( 0 != Modem_FactoryReset() )
+    {
+        return RETURN_ERROR;
+    }
+#endif
+
+    return RETURN_OK;
+}
+
+int cellular_hal_modem_reset( void )
+{
+
+#ifdef _WNXL11BWL_PRODUCT_REQ_
+    //Modem Reset operation
+    if( 0 != Modem_Reboot() )
+    {
+        return RETURN_ERROR;
+    }
 #endif
 
     return RETURN_OK;

@@ -876,6 +876,43 @@ int CellularMgr_RadioSignalGetSignalInfo( CELLULAR_INTERFACE_SERVING_INFO *pstSe
     return RETURN_OK;
 }
 
+void* CellularMgr_FactoryResetThread(void* arg)
+{
+    CcspTraceInfo(("Successfully pthread created for Device.Cellular.X_RDK_DeviceManagement.FactoryReset \n"));
+
+    UNREFERENCED_PARAMETER(arg);
+
+    //detach thread from caller stack
+    pthread_detach(pthread_self());
+
+    // cellular_hal_modem_factory_reset HAL Function
+    if ( RETURN_OK == cellular_hal_modem_factory_reset() )
+    {
+        CcspTraceInfo (("%s : Resetting Cellular to factory default settings\n", __FUNCTION__));
+
+        // cellular_hal_modem_reset HAL Function
+        if ( RETURN_OK == cellular_hal_modem_reset() )
+        {
+            CcspTraceInfo (("%s : Rebooting Cellular to factory default settings\n", __FUNCTION__));
+        }
+        else
+        {
+            CcspTraceError(("%s : returns error returning.\n", __FUNCTION__));
+        }
+        //Restarting the Cellular after HAL configuration
+        exit(0);
+    }
+    else
+    {
+        CcspTraceError(("%s : returns error returning.\n", __FUNCTION__));
+    }
+
+    CcspTraceInfo(("%s - Exit\n",__FUNCTION__));
+
+    //Cleanup current thread when exit
+    pthread_exit(NULL);
+}
+
 int CellularMgr_ServingSystemInfo( CELLULAR_INTERFACE_INFO  *pstInterfaceInfo, CELLULAR_INTERFACE_CONTEXTPROFILE_INFO *pstContextProfileInfo)
 {
     int registration_status;
@@ -1302,4 +1339,15 @@ BOOL CellularMgr_BlobUnpack(char* blob)
         }
     }
     return TRUE;
+}
+
+void CellularMgr_FactoryReset(void)
+{
+    pthread_t tid;
+    int ret;
+    ret = pthread_create(&tid, NULL, &CellularMgr_FactoryResetThread, NULL);
+    if ( ret != 0 )
+    {
+        CcspTraceError(("%s : Failed to create thread due to returns error: %d\n", ret, __FUNCTION__));
+    }
 }

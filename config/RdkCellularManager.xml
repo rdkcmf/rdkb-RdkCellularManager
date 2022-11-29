@@ -98,12 +98,20 @@
                     <objectType>object</objectType>
                     <functions>
                     <func_GetParamStringValue>DeviceManagement_GetParamStringValue</func_GetParamStringValue>
+                    <func_GetParamBoolValue>DeviceManagement_GetParamBoolValue</func_GetParamBoolValue>
+                    <func_SetParamBoolValue>DeviceManagement_SetParamBoolValue</func_SetParamBoolValue>
                     </functions>
                     <parameters>
                         <parameter>
                             <name>Imei</name>
                             <type>string(16)</type>
                             <syntax>string</syntax>
+                        </parameter>
+                        <parameter>
+                            <name>FactoryReset</name>
+                            <type>boolean</type>
+                            <syntax>bool</syntax>
+                            <writable>true</writable>
                         </parameter>
                     </parameters>
                 </object>

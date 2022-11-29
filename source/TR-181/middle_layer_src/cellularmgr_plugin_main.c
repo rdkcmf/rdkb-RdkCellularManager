@@ -120,6 +120,8 @@ int ANSC_EXPORT_API CellularMgr_DMLInit
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Cellular_Rollback",  Cellular_Rollback);
 
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "DeviceManagement_GetParamStringValue",  DeviceManagement_GetParamStringValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "DeviceManagement_GetParamBoolValue",  DeviceManagement_GetParamBoolValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "DeviceManagement_SetParamBoolValue",  DeviceManagement_SetParamBoolValue);
 
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Cellular_Interface_GetEntryCount",  Cellular_Interface_GetEntryCount);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Cellular_Interface_GetEntry",  Cellular_Interface_GetEntry);

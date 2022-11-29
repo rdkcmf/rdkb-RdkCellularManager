@@ -450,4 +450,6 @@ int CellularMgr_SetModemPreferredRadioTechnology( char *pPreferredRAT );
 
 int CellularMgr_GetModemCurrentRadioTechnology( char *pCurrentRAT );
 
+void CellularMgr_FactoryReset(void);
+
 #endif //_CELLULARMGR_CELLULAR_APIS_H_
