@@ -1133,6 +1133,8 @@ int CellularMgr_GetAvailableNetworksInformation( PCELLULAR_PLMN_AVAILABLENETWORK
         *ppAvailableNetworkInfo = NULL;
     }
  
+    *puiTotalCount = 0;
+
     if( RETURN_OK == cellular_hal_get_available_networks_information( &network_info, &total_network_count ) )
     {
         if( 0 < total_network_count )
@@ -1153,7 +1155,7 @@ int CellularMgr_GetAvailableNetworksInformation( PCELLULAR_PLMN_AVAILABLENETWORK
             *puiTotalCount = total_network_count;
             *ppAvailableNetworkInfo = pstTmpInfo;
             
-	    if( NULL != network_info )
+            if( NULL != network_info )
             { 
                 free(network_info);
                 network_info = NULL; 

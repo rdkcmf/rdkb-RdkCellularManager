@@ -1148,12 +1148,30 @@ rbusError_t AvailableNetworks_Synchronize_rbus(void* ctx)
         return RBUS_ERROR_BUS_ERROR;
     }
 
-    ULONG AvailableNetworkCurrentEntriesCount = pstPlmnInfo->ulAvailableNetworkNoOfEntries;
+    ULONG ulPrevCount = pstPlmnInfo->ulAvailableNetworkNoOfEntries;
 
     CellularMgr_GetAvailableNetworksInformation( &pstPlmnInfo->pstAvailableNetworks, &pstPlmnInfo->ulAvailableNetworkNoOfEntries );
 
-    if ((AvailableNetworkCurrentEntriesCount != pstPlmnInfo->ulAvailableNetworkNoOfEntries) &&
-        (pstPlmnInfo->pstAvailableNetworks != NULL))
+    /**
+     *  RBUS Limitation Hack:
+     *  We need to unregister all rows except default 1st row and set context
+     * */
+
+    if( ulPrevCount > 0 )
+    {
+        char param_name[256] = {0};
+        sprintf(param_name, PLMNACCESS_AVAILABLENETWORK_TABLE, index);
+        for(int i = 1; i < ulPrevCount; i++)
+        {
+            if (Sample_UnregisterRow(param_name, (i+1)) == RBUS_ERROR_SUCCESS)
+            {
+                CcspTraceInfo(("%s: Unregistered Previously available network table:Inst(%s%d) \n", __FUNCTION__, param_name, (i+1)));
+            }
+        }
+    }
+    
+    if( ( pstPlmnInfo->ulAvailableNetworkNoOfEntries > 0 ) &&
+        ( pstPlmnInfo->pstAvailableNetworks != NULL ) )
     {
         char param_name[256] = {0};
         sprintf(param_name, PLMNACCESS_AVAILABLENETWORK_TABLE, index);
@@ -1169,6 +1187,18 @@ rbusError_t AvailableNetworks_Synchronize_rbus(void* ctx)
                 CcspTraceInfo(("%s-%d : tableName(%s), Inst(%d) \n",__FUNCTION__, __LINE__, param_name, (i+1)));
                 SetRowContext(param_name, (i+1), NULL, pAvailableNetworkInfo);
             }
+        }
+    }
+    else
+    {
+        //RBUS Limitation FIX:
+        if( pstPlmnInfo->ulAvailableNetworkNoOfEntries == 0 )
+        {
+            char param_name[256] = {0};
+            sprintf(param_name, PLMNACCESS_AVAILABLENETWORK_TABLE, index);
+            CcspTraceInfo(("%s-%d : tableName(%s), Inst(%d) \n",__FUNCTION__, __LINE__, param_name, 1));
+            SetRowContext(param_name, 1, NULL, NULL);
+            pstPlmnInfo->ulAvailableNetworkNoOfEntries = 1;
         }
     }
 
