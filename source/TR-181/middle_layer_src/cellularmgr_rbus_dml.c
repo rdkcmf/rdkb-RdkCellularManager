@@ -704,7 +704,7 @@ static rbusError_t Cellular_Interface_GetParamUlongValue_rbus(rbusHandle_t handl
     {
         rbusProperty_SetUInt32(property, pstInterfaceInfo->RegistrationRetryTimer);
     }
-    else if(strcmp(context.name, "Rfcn") == 0)
+    else if(strcmp(context.name, "X_RDK_RFCN") == 0)
     {
         rbusProperty_SetUInt32(property, pstServingInfo->Rfcn);
     }
@@ -791,11 +791,11 @@ static rbusError_t Cellular_Interface_GetParamStringValue_rbus(rbusHandle_t hand
             rbusProperty_SetString(property, "NONE");
         }
     }
-    else if(strcmp(context.name, "CellId") == 0)
+    else if(strcmp(context.name, "X_RDK_CellId") == 0)
     {
         rbusProperty_SetString(property, pstServingInfo->CellId);
     }
-    else if(strcmp(context.name, "Rat") == 0)
+    else if(strcmp(context.name, "X_RDK_RAT") == 0)
     {
         if (pstServingInfo->Rat == RAT_INFO_GSM)
         {
@@ -814,11 +814,11 @@ static rbusError_t Cellular_Interface_GetParamStringValue_rbus(rbusHandle_t hand
             rbusProperty_SetString(property, "None");
         }
     }
-    else if(strcmp(context.name, "PlmnId") == 0)
+    else if(strcmp(context.name, "X_RDK_PlmnId") == 0)
     {
         rbusProperty_SetString(property, pstServingInfo->PlmnId);
     }
-    else if(strcmp(context.name, "AreaCode") == 0)
+    else if(strcmp(context.name, "X_RDK_AreaCode") == 0)
     {
         rbusProperty_SetString(property, pstServingInfo->AreaCode);
     }
@@ -3220,11 +3220,11 @@ rbusError_t registerGeneratedDataElements(rbusHandle_t handle)
         {"Device.Cellular.Interface.{i}.SupportedAccessTechnologies", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.PreferredAccessTechnologies", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, Cellular_Interface_SetParamStringValue_rbus, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.CurrentAccessTechnology", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
-        {"Device.Cellular.Interface.{i}.CellId", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
-        {"Device.Cellular.Interface.{i}.Rat", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
-        {"Device.Cellular.Interface.{i}.Rfcn", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamUlongValue_rbus, NULL, NULL, NULL, NULL, NULL}},
-        {"Device.Cellular.Interface.{i}.PlmnId", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
-        {"Device.Cellular.Interface.{i}.AreaCode", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
+        {"Device.Cellular.Interface.{i}.X_RDK_CellId", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
+        {"Device.Cellular.Interface.{i}.X_RDK_RAT", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
+        {"Device.Cellular.Interface.{i}.X_RDK_RFCN", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamUlongValue_rbus, NULL, NULL, NULL, NULL, NULL}},
+        {"Device.Cellular.Interface.{i}.X_RDK_PlmnId", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
+        {"Device.Cellular.Interface.{i}.X_RDK_AreaCode", RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamStringValue_rbus, NULL, NULL, NULL, NULL, NULL}},
         {"Device.Cellular.Interface.{i}.RSSI", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamIntValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
         {"Device.Cellular.Interface.{i}.X_RDK_SNR", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamIntValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
         {"Device.Cellular.Interface.{i}.RSRP", RBUS_ELEMENT_TYPE_EVENT | RBUS_ELEMENT_TYPE_PROPERTY, {Cellular_Interface_GetParamIntValue_rbus, NULL, NULL, NULL, CellularMgrDmlPublishEventHandler, NULL}},
