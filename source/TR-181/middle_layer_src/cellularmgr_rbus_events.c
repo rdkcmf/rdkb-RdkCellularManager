@@ -554,26 +554,56 @@ rbusError_t CellularMgrDmlPublishEventHandler(rbusHandle_t handle, rbusEventSubA
 
     *autoPublish = FALSE;
 
+    /** 
+     * We need to process publish based on least interval value for ON-INTERVAL change.
+     * For example,
+     * Initially one param is asking subscription for 60seconds interval. 
+     * After sometime same param is asking subscription for 30seconds interval then we need to send 
+     * event for least interval timer.
+     * 
+     * Return error when the proposed interval is not valid which means value not % RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL
+    */
+
     if(strstr(eventName, ".X_RDK_RadioEnvConditions"))
     {
+        int iProposedInterval = 0;
+
         if (action == RBUS_EVENT_ACTION_SUBSCRIBE)
         {
             if( 0 == gRBUSSubListSt.stRadioSignal.RadioEnvCondSubFlag )
             {
                 gRBUSSubListSt.stRadioSignal.RadioEnvCondLapsedCounterTimer = 0;
+                gRBUSSubListSt.stRadioSignal.RadioEnvCondSubInterval = 0;
             }
 
-            gRBUSSubListSt.stRadioSignal.RadioEnvCondSubFlag++;
-            gRBUSSubListSt.stRadioSignal.RadioEnvCondSubInterval = 0;
             if( interval > 0 )
             {
-                gRBUSSubListSt.stRadioSignal.RadioEnvCondSubInterval = RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL;
                 if( 0 == ( interval % RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL ) )
                 {
-                    gRBUSSubListSt.stRadioSignal.RadioEnvCondSubInterval = interval;
+                    iProposedInterval = interval;
+                }
+                else
+                {
+                    CcspTraceInfo(("%s-%d : Unable to subcribe X_RDK_RadioEnvConditions due to invalid interval(%d)\n", __FUNCTION__, __LINE__, interval));
+                    return RBUS_ERROR_BUS_ERROR;
+                }
+
+                if( 0 == gRBUSSubListSt.stRadioSignal.RadioEnvCondSubInterval )
+                {
+                    gRBUSSubListSt.stRadioSignal.RadioEnvCondSubInterval = iProposedInterval;
+                    gRBUSSubListSt.stRadioSignal.RadioEnvCondLapsedCounterTimer = 0;
+                }
+                else
+                {
+                    if( iProposedInterval < gRBUSSubListSt.stRadioSignal.RadioEnvCondSubInterval )
+                    {
+                        gRBUSSubListSt.stRadioSignal.RadioEnvCondSubInterval = iProposedInterval;
+                        gRBUSSubListSt.stRadioSignal.RadioEnvCondLapsedCounterTimer = 0;
+                    }
                 }
             }
 
+            gRBUSSubListSt.stRadioSignal.RadioEnvCondSubFlag++;
             CcspTraceInfo(("%s-%d : X_RDK_RadioEnvConditions Sub(%d) Interval(%d)\n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.RadioEnvCondSubFlag,gRBUSSubListSt.stRadioSignal.RadioEnvCondSubInterval));
         }
         else
@@ -593,24 +623,44 @@ rbusError_t CellularMgrDmlPublishEventHandler(rbusHandle_t handle, rbusEventSubA
     }
     else if(strstr(eventName, ".RSSI"))
     {
+        int iProposedInterval = 0;
+
         if (action == RBUS_EVENT_ACTION_SUBSCRIBE)
         {
             if( 0 == gRBUSSubListSt.stRadioSignal.RSSISubFlag )
             {
                 gRBUSSubListSt.stRadioSignal.RSSILapsedCounterTimer = 0;
+                gRBUSSubListSt.stRadioSignal.RSSISubInterval = 0;
             }
 
-            gRBUSSubListSt.stRadioSignal.RSSISubFlag++;
-            gRBUSSubListSt.stRadioSignal.RSSISubInterval = 0;
             if( interval > 0 )
             {
-                gRBUSSubListSt.stRadioSignal.RSSISubInterval = RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL;
                 if( 0 == ( interval % RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL ) )
                 {
-                    gRBUSSubListSt.stRadioSignal.RSSISubInterval = interval;
+                    iProposedInterval = interval;
+                }
+                else
+                {
+                    CcspTraceInfo(("%s-%d : Unable to subcribe RSSI due to invalid interval(%d)\n", __FUNCTION__, __LINE__, interval));
+                    return RBUS_ERROR_BUS_ERROR;
+                }
+
+                if( 0 == gRBUSSubListSt.stRadioSignal.RSSISubInterval )
+                {
+                    gRBUSSubListSt.stRadioSignal.RSSISubInterval = iProposedInterval;
+                    gRBUSSubListSt.stRadioSignal.RSSILapsedCounterTimer = 0;
+                }
+                else
+                {
+                    if( iProposedInterval < gRBUSSubListSt.stRadioSignal.RSSISubInterval )
+                    {
+                        gRBUSSubListSt.stRadioSignal.RSSISubInterval = iProposedInterval;
+                        gRBUSSubListSt.stRadioSignal.RSSILapsedCounterTimer = 0;
+                    }
                 }
             }
 
+            gRBUSSubListSt.stRadioSignal.RSSISubFlag++;
             CcspTraceInfo(("%s-%d : RSSI Sub(%d) Interval(%d)\n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.RSSISubFlag,gRBUSSubListSt.stRadioSignal.RSSISubInterval));
         }
         else
@@ -629,23 +679,44 @@ rbusError_t CellularMgrDmlPublishEventHandler(rbusHandle_t handle, rbusEventSubA
     }
     else if(strstr(eventName, ".X_RDK_SNR"))
     {
+        int iProposedInterval = 0;
+
         if (action == RBUS_EVENT_ACTION_SUBSCRIBE)
         {
             if( 0 == gRBUSSubListSt.stRadioSignal.SNRSubFlag )
             {
                 gRBUSSubListSt.stRadioSignal.SNRLapsedCounterTimer = 0;
+                gRBUSSubListSt.stRadioSignal.SNRSubInterval = 0;
+            }
+
+            if( interval > 0 )
+            {
+                if( 0 == ( interval % RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL ) )
+                {
+                    iProposedInterval = interval;
+                }
+                else
+                {
+                    CcspTraceInfo(("%s-%d : Unable to subcribe X_RDK_SNR due to invalid interval(%d)\n", __FUNCTION__, __LINE__, interval));
+                    return RBUS_ERROR_BUS_ERROR;
+                }
+
+                if( 0 == gRBUSSubListSt.stRadioSignal.SNRSubInterval )
+                {
+                    gRBUSSubListSt.stRadioSignal.SNRSubInterval = iProposedInterval;
+                    gRBUSSubListSt.stRadioSignal.SNRLapsedCounterTimer = 0;
+                }
+                else
+                {
+                    if( iProposedInterval < gRBUSSubListSt.stRadioSignal.SNRSubInterval )
+                    {
+                        gRBUSSubListSt.stRadioSignal.SNRSubInterval = iProposedInterval;
+                        gRBUSSubListSt.stRadioSignal.SNRLapsedCounterTimer = 0;
+                    }
+                }
             }
 
             gRBUSSubListSt.stRadioSignal.SNRSubFlag++;
-            gRBUSSubListSt.stRadioSignal.SNRSubInterval = 0;
-            if( interval > 0 )
-            {
-                gRBUSSubListSt.stRadioSignal.SNRSubInterval = RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL;
-                if( 0 == ( interval % RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL ) )
-                {
-                    gRBUSSubListSt.stRadioSignal.SNRSubInterval = interval;
-                }
-            }
             CcspTraceInfo(("%s-%d : X_RDK_SNR Sub(%d) Interval(%d)\n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.SNRSubFlag,gRBUSSubListSt.stRadioSignal.SNRSubInterval));
         }
         else
@@ -664,23 +735,44 @@ rbusError_t CellularMgrDmlPublishEventHandler(rbusHandle_t handle, rbusEventSubA
     }
     else if(strstr(eventName, ".RSRP"))
     {
+        int iProposedInterval = 0;
+
         if (action == RBUS_EVENT_ACTION_SUBSCRIBE)
         {
             if( 0 == gRBUSSubListSt.stRadioSignal.RSRPSubFlag )
             {
                 gRBUSSubListSt.stRadioSignal.RSRPLapsedCounterTimer = 0;
+                gRBUSSubListSt.stRadioSignal.RSRPSubInterval = 0;
+            }
+
+            if( interval > 0 )
+            {
+                if( 0 == ( interval % RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL ) )
+                {
+                    iProposedInterval = interval;
+                }
+                else
+                {
+                    CcspTraceInfo(("%s-%d : Unable to subcribe RSRP due to invalid interval(%d)\n", __FUNCTION__, __LINE__, interval));
+                    return RBUS_ERROR_BUS_ERROR;
+                }
+
+                if( 0 == gRBUSSubListSt.stRadioSignal.RSRPSubInterval )
+                {
+                    gRBUSSubListSt.stRadioSignal.RSRPSubInterval = iProposedInterval;
+                    gRBUSSubListSt.stRadioSignal.RSRPLapsedCounterTimer = 0;
+                }
+                else
+                {
+                    if( iProposedInterval < gRBUSSubListSt.stRadioSignal.RSRPSubInterval )
+                    {
+                        gRBUSSubListSt.stRadioSignal.RSRPSubInterval = iProposedInterval;
+                        gRBUSSubListSt.stRadioSignal.RSRPLapsedCounterTimer = 0;
+                    }
+                }
             }
 
             gRBUSSubListSt.stRadioSignal.RSRPSubFlag++;
-            gRBUSSubListSt.stRadioSignal.RSRPSubInterval = 0;
-            if( interval > 0 )
-            {
-                gRBUSSubListSt.stRadioSignal.RSRPSubInterval = RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL;
-                if( 0 == ( interval % RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL ) )
-                {
-                    gRBUSSubListSt.stRadioSignal.RSRPSubInterval = interval;
-                }
-            }
             CcspTraceInfo(("%s-%d : RSRP Sub(%d) Interval(%d)\n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.RSRPSubFlag,gRBUSSubListSt.stRadioSignal.RSRPSubInterval));
         }
         else
@@ -699,23 +791,44 @@ rbusError_t CellularMgrDmlPublishEventHandler(rbusHandle_t handle, rbusEventSubA
     }
     else if(strstr(eventName, ".RSRQ"))
     {
+        int iProposedInterval = 0;
+
         if (action == RBUS_EVENT_ACTION_SUBSCRIBE)
         {
             if( 0 == gRBUSSubListSt.stRadioSignal.RSRQSubFlag )
             {
                 gRBUSSubListSt.stRadioSignal.RSRQLapsedCounterTimer = 0;
+                gRBUSSubListSt.stRadioSignal.RSRQSubInterval = 0;
+            }
+
+            if( interval > 0 )
+            {
+                if( 0 == ( interval % RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL ) )
+                {
+                    iProposedInterval = interval;
+                }
+                else
+                {
+                    CcspTraceInfo(("%s-%d : Unable to subcribe RSRQ due to invalid interval(%d)\n", __FUNCTION__, __LINE__, interval));
+                    return RBUS_ERROR_BUS_ERROR;
+                }
+
+                if( 0 == gRBUSSubListSt.stRadioSignal.RSRQSubInterval )
+                {
+                    gRBUSSubListSt.stRadioSignal.RSRQSubInterval = iProposedInterval;
+                    gRBUSSubListSt.stRadioSignal.RSRQLapsedCounterTimer = 0;
+                }
+                else
+                {
+                    if( iProposedInterval < gRBUSSubListSt.stRadioSignal.RSRQSubInterval )
+                    {
+                        gRBUSSubListSt.stRadioSignal.RSRQSubInterval = iProposedInterval;
+                        gRBUSSubListSt.stRadioSignal.RSRQLapsedCounterTimer = 0;
+                    }
+                }
             }
 
             gRBUSSubListSt.stRadioSignal.RSRQSubFlag++;
-            gRBUSSubListSt.stRadioSignal.RSRQSubInterval = 0;
-            if( interval > 0 )
-            {
-                gRBUSSubListSt.stRadioSignal.RSRQSubInterval = RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL;
-                if( 0 == ( interval % RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL ) )
-                {
-                    gRBUSSubListSt.stRadioSignal.RSRQSubInterval = interval;
-                }
-            }
             CcspTraceInfo(("%s-%d : RSRQ Sub(%d) Interval(%d)\n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.RSRQSubFlag,gRBUSSubListSt.stRadioSignal.RSRQSubInterval));
         }
         else
@@ -734,23 +847,44 @@ rbusError_t CellularMgrDmlPublishEventHandler(rbusHandle_t handle, rbusEventSubA
     }
     else if(strstr(eventName, ".X_RDK_TRX"))
     {
+        int iProposedInterval = 0;
+
         if (action == RBUS_EVENT_ACTION_SUBSCRIBE)
         {
             if( 0 == gRBUSSubListSt.stRadioSignal.TRXSubFlag )
             {
                 gRBUSSubListSt.stRadioSignal.TRXLapsedCounterTimer = 0;
+                gRBUSSubListSt.stRadioSignal.TRXSubInterval = 0;
+            }
+
+            if( interval > 0 )
+            {
+                if( 0 == ( interval % RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL ) )
+                {
+                    iProposedInterval = interval;
+                }
+                else
+                {
+                    CcspTraceInfo(("%s-%d : Unable to subcribe X_RDK_TRX due to invalid interval(%d)\n", __FUNCTION__, __LINE__, interval));
+                    return RBUS_ERROR_BUS_ERROR;
+                }
+
+                if( 0 == gRBUSSubListSt.stRadioSignal.TRXSubInterval )
+                {
+                    gRBUSSubListSt.stRadioSignal.TRXSubInterval = iProposedInterval;
+                    gRBUSSubListSt.stRadioSignal.TRXLapsedCounterTimer = 0;
+                }
+                else
+                {
+                    if( iProposedInterval < gRBUSSubListSt.stRadioSignal.TRXSubInterval )
+                    {
+                        gRBUSSubListSt.stRadioSignal.TRXSubInterval = iProposedInterval;
+                        gRBUSSubListSt.stRadioSignal.TRXLapsedCounterTimer = 0;
+                    }
+                }
             }
 
             gRBUSSubListSt.stRadioSignal.TRXSubFlag++;
-            gRBUSSubListSt.stRadioSignal.TRXSubInterval = 0;
-            if( interval > 0 )
-            {
-                gRBUSSubListSt.stRadioSignal.TRXSubInterval = RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL;
-                if( 0 == ( interval % RBUS_SUBSCRIPTION_PUBLISH_POLLING_INTERVAL ) )
-                {
-                    gRBUSSubListSt.stRadioSignal.TRXSubInterval = interval;
-                }
-            }
             CcspTraceInfo(("%s-%d : X_RDK_TRX Sub(%d) Interval(%d)\n", __FUNCTION__, __LINE__, gRBUSSubListSt.stRadioSignal.TRXSubFlag,gRBUSSubListSt.stRadioSignal.TRXSubInterval));
         }
         else
