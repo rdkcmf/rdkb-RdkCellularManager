@@ -17,6 +17,25 @@
  * limitations under the License.
 */
 
+/**
+* @file cellular_hal.h
+* @brief For CCSP Component: Cellular Manager HAL Layer
+*
+*/
+
+/**
+ * @defgroup CELLULAR_HAL CELLULAR HAL
+ *
+ * This module provides the function call prototypes used for the Cellular Manager abstraction layer..
+ *
+ * @defgroup CELLULAR_HAL_TYPES   CELLULAR HAL Data Types
+ * @ingroup  CELLULAR_HAL
+ * 
+ * @defgroup CELLULAR_HAL_APIS   CELLULAR HAL APIs
+ * @ingroup  CELLULAR_HAL
+ *
+ **/
+ 
 #ifndef _CELLULAR_HAL_H_
 #define _CELLULAR_HAL_H_
 
@@ -41,8 +60,12 @@
 /**********************************************************************
                 STRUCTURE AND CONSTANT DEFINITIONS
 **********************************************************************/
+/**
+* @addtogroup CELLULAR_HAL_TYPES
+* @{
+*/
 
-//For now we are supporting QMI library 
+/** For now we are supporting QMI library */
 #define QMI_SUPPORT
 
 #define RETURN_ERROR        (-1)
@@ -85,7 +108,7 @@
 *  This struct is for cellular object.
 */
 
-/** Status of the cellular interface */
+/**Status of the cellular interface.*/
 typedef enum _CellularInterfaceStatus_t {
     IF_UP = 1,
     IF_DOWN,
@@ -107,17 +130,19 @@ typedef enum _CellularIpFamilyPref_t {
 
 /** IP Family Preference */
 typedef enum _CellularPrefAccessTechnology_t {
-    PREF_GPRS          = 1,                     //GSM with GPRS
-    PREF_EDGE,                                  //GSM with EDGE
-    PREF_UMTS,                                  //UMTS
-    PREF_UMTSHSPA,                              //3GPP-HSPA
-    PREF_CDMA2000OneX,                          //CDMA2000OneX
-    PREF_CDMA2000HRPD,                          //CDMA2000HRPD
-    PREF_LTE,                                   //LTE
-    PREF_NR                                     //5G New Radio
+
+    PREF_GPRS          = 1,                     ///<GSM with GPRS
+    PREF_EDGE,                                  ///<GSM with EDGE
+    PREF_UMTS,                                  ///<UMTS
+    PREF_UMTSHSPA,                              ///<3GPP-HSPA
+    PREF_CDMA2000OneX,                          ///<CDMA2000OneX
+    PREF_CDMA2000HRPD,                          ///<CDMA2000HRPD
+    PREF_LTE,                                   ///<LTE
+    PREF_NR                                     ///<5G New Radio
 
 }CellularPrefAccessTechnology_t;
 
+/** List of Packet Data Protocol Types */
 typedef enum _CellularPDPType_t
 { 
     CELLULAR_PDP_TYPE_IPV4         = 0,
@@ -127,6 +152,7 @@ typedef enum _CellularPDPType_t
 
 }CellularPDPType_t;
 
+/** List of PDP Authentication Types */
 typedef enum _CellularPDPAuthentication_t
 { 
     CELLULAR_PDP_AUTHENTICATION_NONE    = 0,
@@ -149,6 +175,7 @@ typedef enum _CellularPDPNetworkConfig_t
 } 
 CellularPDPNetworkConfig_t;
 
+/** The enum with modem operating configurations */
 typedef enum _CellularModemOperatingConfiguration_t
 { 
     CELLULAR_MODEM_SET_ONLINE     = 1,
@@ -159,6 +186,7 @@ typedef enum _CellularModemOperatingConfiguration_t
 
 } CellularModemOperatingConfiguration_t;
 
+/** The enum with Registered service types */
 typedef enum _CellularModemRegisteredServiceType_t
 {
    CELLULAR_MODEM_REGISTERED_SERVICE_NONE = 0,
@@ -168,6 +196,7 @@ typedef enum _CellularModemRegisteredServiceType_t
 } 
 CellularModemRegisteredServiceType_t;
 
+/** Registration Status*/
 typedef enum _CellularRegistrationStatus_t
 {
    DEVICE_REGISTERED = 1,
@@ -198,9 +227,9 @@ typedef  struct
 
 typedef  struct                                     
 {
-    CellularIpFamilyPref_t              enIPFamilyPreference;       //Ipv4 or Ipv6 or dual stack
-    CellularProfileStruct               stIfInput;                  //Interface input like APN, UserName, Password etc...
-    CellularPrefAccessTechnology_t      enPreferenceTechnology;     //Preference technology like LTE, 3GPP etc...
+    CellularIpFamilyPref_t              enIPFamilyPreference;       ///<Ipv4 or Ipv6 or dual stack
+    CellularProfileStruct               stIfInput;                  ///<Interface input like APN, UserName, Password etc...
+    CellularPrefAccessTechnology_t      enPreferenceTechnology;     ///<Preference technology like LTE, 3GPP etc...
 
 } CellularContextInitInputStruct;
 
@@ -242,6 +271,7 @@ typedef  struct
 } CellularPacketStatsStruct;
 
 /* UICC/eUICC */
+/** The enum with UICC Form Factors - 1FF/2FF/3FF/4FF */
 typedef enum _CellularUICCFormFactor_t
 { 
     CELLULAR_UICC_FORM_FACTOR_1FF     = 0,
@@ -251,6 +281,7 @@ typedef enum _CellularUICCFormFactor_t
 
 } CellularUICCFormFactor_t;
 
+/** The enum with current SIM status*/
 typedef enum _CellularUICCStatus_t
 { 
     CELLULAR_UICC_STATUS_VALID     = 0,
@@ -305,7 +336,7 @@ typedef  struct
     unsigned long                           cell_id;
 
 } CellularCurrentPlmnInfoStruct;
-
+    
 typedef  struct                                     
 {
     char                                    network_name[32];
@@ -316,6 +347,8 @@ typedef  struct
 } CellularNetworkScanResultInfoStruct;
 
 /* Cellular Device Status Events and Callbacks */
+
+/** Cellular Device Detection Status */
 typedef enum _CellularDeviceDetectionStatus_t
 {
    DEVICE_DETECTED = 1,
@@ -323,6 +356,7 @@ typedef enum _CellularDeviceDetectionStatus_t
 
 }CellularDeviceDetectionStatus_t;
 
+/** Cellular Device Open Status */
 typedef enum _CellularDeviceOpenStatus_t
 {
    DEVICE_OPEN_STATUS_NOT_READY = 1,
@@ -331,6 +365,7 @@ typedef enum _CellularDeviceOpenStatus_t
 
 }CellularDeviceOpenStatus_t;
 
+/** Cellular Device Slot Status - Not Ready(1)/Selecting(2)/Ready(3) */
 typedef enum _CellularDeviceSlotStatus_t
 {
    DEVICE_SLOT_STATUS_NOT_READY = 1,
@@ -339,6 +374,7 @@ typedef enum _CellularDeviceSlotStatus_t
 
 } CellularDeviceSlotStatus_t;
 
+/** Cellular Device NAS Status - Not Registered/ Registering/ Registered */
 typedef enum _CellularDeviceNASStatus_t
 {
    DEVICE_NAS_STATUS_NOT_REGISTERED = 1,
@@ -347,6 +383,7 @@ typedef enum _CellularDeviceNASStatus_t
 
 } CellularDeviceNASStatus_t;
 
+/** Cellular Device NAS Roaming Status */
 typedef enum _CellularDeviceNASRoamingStatus_t
 {
    DEVICE_NAS_STATUS_ROAMING_OFF = 1,
@@ -361,6 +398,7 @@ typedef enum _CellularContextProfileStatus_t
 
 } CellularContextProfileStatus_t;
 
+/** Cellular Device Profile Selection Status */
 typedef enum _CellularDeviceProfileSelectionStatus_t
 {
    DEVICE_PROFILE_STATUS_NOT_READY = 1,
@@ -370,6 +408,7 @@ typedef enum _CellularDeviceProfileSelectionStatus_t
 
 } CellularDeviceProfileSelectionStatus_t;
 
+/** Cellular Device IP Ready Status */
 typedef enum _CellularDeviceIPReadyStatus_t
 {
    DEVICE_NETWORK_IP_NOT_READY = 1,
@@ -377,12 +416,21 @@ typedef enum _CellularDeviceIPReadyStatus_t
 
 } CellularDeviceIPReadyStatus_t;
 
+/** Cellular Network Packet Status -Disconnected(1)/Connected(2) */
 typedef enum _CellularNetworkPacketStatus_t
 {
    DEVICE_NETWORK_STATUS_DISCONNECTED = 1,
    DEVICE_NETWORK_STATUS_CONNECTED,
 
 } CellularNetworkPacketStatus_t;
+
+
+/** @} */  //END OF GROUP CELLULAR_HAL_TYPES
+
+/**
+ * @addtogroup CELLULAR_HAL_APIS
+ * @{
+ */
 
 /**********************************************************************
                 FUNCTION PROTOTYPES
@@ -392,6 +440,8 @@ typedef enum _CellularNetworkPacketStatus_t
 /**
 * @description - Returns Modem Device Available Status
 *
+* @param None
+*    
 * @return The status of the operation
 * @retval TRUE if modem device presents
 * @retval FALSE if modem device not presents
@@ -407,6 +457,8 @@ cellular_hal_IsModemDevicePresent
 /**
 * @description - Initialise the Cellular HAL
 *
+* @param[in] pstCtxInputStruct - The Input structure to pass to cellular hal initialization function
+* 
 * @return The status of the operation
 * @retval RETURN_OK if successful
 * @retval RETURN_ERR if any error is detected
@@ -422,6 +474,11 @@ cellular_hal_init
 /**
 * @description - This callback sends to upper layer when after successfully open cellular device context
 *
+* @param device_name - The param contains the modem device name.
+* @param wan_ifname - This param contains the WAN interface name
+* @param device_open_status - The enum filled with Cellular Device Open Status Events - Not Ready/In Progress/Ready.
+* @param modem_operating_mode - The enum filled with modem operating configurations
+*  
 * @return The status of the operation
 * @retval RETURN_OK if successful
 * @retval RETURN_ERR if any error is detected
@@ -433,6 +490,9 @@ typedef int (*cellular_device_open_status_api_callback)( char *device_name, char
 /**
 * @description - This callback sends to upper layer when after successfully removed modem from device
 *
+* @param device_name - The param contains the modem device name.
+* @param device_detection_status - This enum contains the Cellular Device Detection Status Events  
+*  
 * @return The status of the operation
 * @retval RETURN_OK if successful
 * @retval RETURN_ERR if any error is detected
@@ -447,11 +507,12 @@ typedef  struct
 
 } CellularDeviceContextCBStruct;
 
+
 /* cellular_hal_open_device function */
 /**
 * @description - This API inform lower layer to create/open device. 
 *
-* @param[in] pstDeviceCtxCB - The strcture receives function pointers for device open/remove status response from driver.
+* @param[in] pstDeviceCtxCB - The structure receives function pointers for device open/remove status response from driver.
 *                                              
 * @return The status of the operation
 * @retval RETURN_OK if successful
@@ -464,6 +525,8 @@ int cellular_hal_open_device(CellularDeviceContextCBStruct *pstDeviceCtxCB);
 /**
 * @description - Returns Modem Control Interface Opened or Not
 *
+* @param None
+*        
 * @return The status of the operation
 * @retval TRUE if modem device opened
 * @retval FALSE if modem device not opened
@@ -475,6 +538,11 @@ unsigned char cellular_hal_IsModemControlInterfaceOpened( void );
 /**
 * @description - This callback sends to upper layer when after successfully select cellular device slot
 *
+* @param slot_name - This param contains the slot name.
+* @param slot_type - This param contains the slot type.
+* @param slot_num - This param contains the slot num.
+* @param device_slot_status - The enum filled with Device Slot Statuses.
+*        
 * @return The status of the operation
 * @retval RETURN_OK if successful
 * @retval RETURN_ERR if any error is detected
@@ -486,7 +554,7 @@ typedef int (*cellular_device_slot_status_api_callback)( char *slot_name, char *
 /**
 * @description - This API inform lower layer to select slot for opened device. 
 *
-* @param[in] cellular_device_slot_status_api_callback - The function pointer which receives device slot status response from driver.
+* @param[in] device_slot_status_cb - The function pointer which receives device slot status response from driver.
 *                                              
 * @return The status of the operation
 * @retval RETURN_OK if successful
@@ -512,7 +580,9 @@ int cellular_hal_sim_power_enable(unsigned int slot_id, unsigned char enable);
 /* cellular_hal_get_total_uicc_slots function */
 /**
 * @description - This API get UICC total slots count from modem 
-*
+* 
+* @param[in] None
+*        
 * @param[out] total_count - This variable receives the total count of UICC slot.
 *                                              
 * @return The status of the operation
@@ -540,6 +610,8 @@ int cellular_hal_get_uicc_slot_info(unsigned int slot_index, CellularUICCSlotInf
 /**
 * @description - This API get current active card status information from modem 
 *
+* @param[in] None
+*        
 * @param[out] CellularUICCStatus_t - The enum filled with current SIM status by lower layer.
 *                                              
 * @return The status of the operation
@@ -553,6 +625,10 @@ int cellular_hal_get_active_card_status(CellularUICCStatus_t *card_status);
 /**
 * @description - This callback sends to upper layer when after successfully registered modem with network
 *
+* @param device_registration_status - The enum filled with Device Registration Status
+* @param roaming_status - The enum filled with Device Roaming Status - On/Off
+* @param registered_service - The enum filled with Registered service type.
+*        
 * @return The status of the operation
 * @retval RETURN_OK if successful
 * @retval RETURN_ERR if any error is detected
@@ -579,6 +655,10 @@ int cellular_hal_monitor_device_registration(cellular_device_registration_status
 /**
 * @description - This callback sends to upper layer when after successfully create/modify/select
 *
+* @param profile_id - The pointer which contains the profile ID.
+* @param PDPType - The enum which is filled with the PDP Type.
+* @param device_profile_status - The enum which receives device profile status response from driver.
+* 
 * @return The status of the operation
 * @retval RETURN_OK if successful
 * @retval RETURN_ERR if any error is detected
@@ -618,7 +698,7 @@ int cellular_hal_profile_delete(CellularProfileStruct *pstProfileInput, cellular
 /**
 * @description - This API inform lower layer to modify profile based on valid pstProfileInput. If NULL then return error. 
 *
-* @param[in] pstProfileInput - Profile structure needs to pass when creating a profile
+* @param[in] pstProfileInput - Profile structure needs to pass when modifying a profile
 * @param[in] device_profile_status_cb - The function pointer which receives device profile modify status response from driver.
 *                                              
 * @return The status of the operation
@@ -632,6 +712,7 @@ int cellular_hal_profile_modify(CellularProfileStruct *pstProfileInput, cellular
 /**
 * @description - This API get list of profiles from Modem
 *
+* @param[in] None
 * @param[out] ppstProfileOutput - List of profiles needs to be return
 * @param[out] profile_count - Total profile count needs to be return
 *                                              
@@ -646,6 +727,10 @@ int cellular_hal_get_profile_list(CellularProfileStruct **ppstProfileOutput, int
 /**
 * @description - This callback sends to upper layer when after getting packet service status after start network
 *
+* @param device_name - The param contains the modem device name.
+* @param ip_type - The enum which receives IP configuration.
+* @param packet_service_status - Packet Service Status - Connected/Disconnected.
+*                     
 * @return The status of the operation
 * @retval RETURN_OK if successful
 * @retval RETURN_ERR if any error is detected
@@ -657,6 +742,9 @@ typedef int (*cellular_network_packet_service_status_api_callback)( char *device
 /**
 * @description - This callback sends IP information to upper layer when after successfully getting ip configuration from driver
 *
+* @param pstIPStruct
+* @param ip_ready_status - IP Ready Status - Not Ready=1, Ready=2
+*        
 * @return The status of the operation
 * @retval RETURN_OK if successful
 * @retval RETURN_ERR if any error is detected
@@ -670,12 +758,12 @@ typedef  struct
     cellular_network_packet_service_status_api_callback     packet_service_status_cb;
 
 } CellularNetworkCBStruct;
-
+ 
 /* cellular_hal_start_network function */
 /**
 * @description - This API inform lower layer to start network based on IP Type and Passed profile input. If NULL then start based on default profile. 
 *
-* @param[in] ip_request_type - The function pointer which receives IP configuration for started network from driver.
+* @param[in] ip_request_type - The enum which receives IP configuration for started network from driver.
 * @param[in] pstProfileInput - Here needs to pass profile to start network. If NULL then it should take it default profile otherwise start based on input
 * @param[in] pstCBStruct - Here needs to fill CB function pointer for packet and ip status
 *                                              
@@ -689,6 +777,8 @@ int cellular_hal_start_network( CellularNetworkIPType_t ip_request_type, Cellula
 /* cellular_hal_stop_network function */
 /**
 * @description - This API inform lower layer to stop network based on valid ip request type.
+*
+* @param[in] ip_request_type - The enum which receives IP configuration for stopped network from driver.
 *                                              
 * @return The status of the operation
 * @retval RETURN_OK if successful
@@ -727,6 +817,7 @@ int cellular_hal_set_modem_operating_configuration(CellularModemOperatingConfigu
 /**
 * @description - Returns Modem Device IMEI information
 *
+* @param[in] None
 * @param[out] imei - Needs to return Modem IMEI value on this input.
 *
 * @return The status of the operation
@@ -740,6 +831,7 @@ int cellular_hal_get_device_imei ( char *imei );
 /**
 * @description - Returns Modem Device IMEI Software Version
 *
+* @param[in] None
 * @param[out] imei_sv - Needs to return Modem IMEI Software Version value on this input.
 *
 * @return The status of the operation
@@ -753,6 +845,7 @@ int cellular_hal_get_device_imei_sv ( char *imei_sv );
 /**
 * @description - Returns Modem Device Current ICCID Information
 *
+* @param[in] None
 * @param[out] iccid - Needs to return currently choosed ICCID value on this input.
 *
 * @return The status of the operation
@@ -766,6 +859,7 @@ int cellular_hal_get_modem_current_iccid ( char *iccid );
 /**
 * @description - Returns Modem Device Current MSISDN Information
 *
+* @param[in] None
 * @param[out] msisdn - Needs to return currently choosed MSISDN value on this input.
 *
 * @return The status of the operation
@@ -804,7 +898,9 @@ int cellular_hal_get_current_modem_interface_status( CellularInterfaceStatus_t *
 /* cellular_hal_set_modem_network_attach function */
 /**
 * @description - This API to attach modem with network registration
-*           
+*          
+* @param None
+* 
 * @return The status of the operation
 * @retval RETURN_OK if successful
 * @retval RETURN_ERR if any error is detected
@@ -816,6 +912,8 @@ int cellular_hal_set_modem_network_attach( void );
 /**
 * @description - This API to detach modem with network registration
 *           
+* @param None
+*
 * @return The status of the operation
 * @retval RETURN_OK if successful
 * @retval RETURN_ERR if any error is detected
@@ -827,6 +925,7 @@ int cellular_hal_set_modem_network_detach( void );
 /**
 * @description - This API get current firmware version of modem
 *
+* @param[in] None
 * @param[out] firmware_version - This string contains firmware version of modem
 *                                              
 * @return The status of the operation
@@ -853,6 +952,7 @@ int cellular_hal_get_current_plmn_information(CellularCurrentPlmnInfoStruct *plm
 /**
 * @description - This API get current active card status information from modem 
 *
+* @param[in] None
 * @param[out] CellularNetworkScanResultInfoStruct - The structure filled with available networks information from Modem.
 * @param[out] total_network_count - This variable filled with total no of available networks
 *                                              
@@ -867,7 +967,8 @@ int cellular_hal_get_available_networks_information(CellularNetworkScanResultInf
 /**
 * @description - Returns Modem preferred Radio Technologies
 *
-* @param[out] param_rat - Contains preferred technology.
+* @param[in] None
+* @param[out] preferred_rat - Contains preferred technology.
 *
 * @return The status of the operation
 * @retval RETURN_OK if successful
@@ -880,7 +981,7 @@ int cellular_hal_get_modem_preferred_radio_technology( char *preferred_rat );
 /**
 * @description - sets Modem preferred Radio Technologies
 *
-* @param[in] param_rat - Contains preferred technology.Should be part of  supported RAT otherwise AUTO will be set
+* @param[in] preferred_rat - Contains preferred technology.Should be part of  supported RAT otherwise AUTO will be set
 *
 * @return The status of the operation
 * @retval RETURN_OK if successful
@@ -894,7 +995,8 @@ int cellular_hal_set_modem_preferred_radio_technology( char *preferred_rat );
 /**
 * @description - Returns Modem current Radio Technologies
 *
-* @param[out] param_rat - Contains current technology used for data.
+* @param[in] None
+* @param[out] current_rat - Contains current technology used for data.
 *
 * @return The status of the operation
 * @retval RETURN_OK if successful
@@ -907,7 +1009,8 @@ int cellular_hal_get_modem_current_radio_technology( char *current_rat );
 /**
 * @description - Returns Modem supported Radio access Technologies 
 *
-* @param[out] param_value - Contains information about supported RAT. 
+* @param[in] None
+* @param[out] supported_rat - Contains information about supported RAT. 
 *
 * @return The status of the operation
 * @retval RETURN_OK if successful
@@ -921,6 +1024,8 @@ int cellular_hal_get_modem_supported_radio_technology ( char *supported_rat );
 /**
 * @description - This API to factory reset the modem
 *
+* @param None
+*   
 * @return The status of the operation
 * @retval RETURN_OK if successful
 * @retval RETURN_ERR if any error is detected
@@ -932,6 +1037,8 @@ int cellular_hal_modem_factory_reset( void );
 /**
 * @description - This API to reset the modem
 *
+* @param None
+*   
 * @return The status of the operation
 * @retval RETURN_OK if successful
 * @retval RETURN_ERR if any error is detected
@@ -939,4 +1046,5 @@ int cellular_hal_modem_factory_reset( void );
 */
 int cellular_hal_modem_reset( void );
 
+/** @} */  //END OF GROUP CELLULAR_HAL_APIS
 #endif //_CELLULAR_HAL_H_
